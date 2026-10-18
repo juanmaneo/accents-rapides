@@ -1,0 +1,7 @@
+# Pinned so that local runs and CI agree: clippy lints and llvm-cov region
+# counts change between releases, and both are enforced as hard gates.
+# Bump deliberately, then rerun `cargo clippy` and `cargo xtask coverage`.
+[toolchain]
+channel = "1.99.1"
+profile = "minimal"
+components = ["rustfmt", "clippy", "llvm-tools"]

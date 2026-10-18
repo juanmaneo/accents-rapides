@@ -1,0 +1,9 @@
+# Authors of accents-rapides, in order of first contribution.
+# Add yourself with your first contribution.
+
+Juan Manuel CABA <contact@juan.email>
+
+# accents-rapides is a Rust port of schnelle-umlaute, whose design and
+# behaviour it reproduces:
+#
+#   Maik-0000FF - https://github.com/Maik-0000FF/schnelle-umlaute

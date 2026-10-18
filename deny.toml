@@ -1,0 +1,51 @@
+# cargo-deny policy, enforced by `cargo xtask audit` (and CI).
+# Reference: https://embarkstudios.github.io/cargo-deny/
+
+[graph]
+# Only evaluate dependencies for the platforms we support (see README.md).
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
+    "x86_64-unknown-freebsd",
+    "aarch64-unknown-freebsd",
+]
+
+[advisories]
+# Version 2: vulnerabilities and unmaintained crates are errors; unsound
+# crates are made errors explicitly below.
+version = 2
+unsound = "all"
+yanked = "deny"
+# Single source of truth for accepted advisories: `cargo xtask audit` also
+# passes these ids to `cargo audit --ignore`. Every entry needs a reason.
+# Both come from iced 0.14's text rendering and have no fix within its
+# semver ranges; revisit on the next iced release. Revisit this list whenever
+# the dependency tree changes, and prefer `cargo update` when a fix exists.
+ignore = [
+    { id = "RUSTSEC-2026-0253", reason = "lru 0.16 (via cryoglyph, iced_wgpu's glyph cache): needs a panic during LruCache::pop; the fix (lru >= 0.18.2) is outside cryoglyph's range" },
+    { id = "RUSTSEC-2026-0192", reason = "ttf-parser is unmaintained, no patched version (via fontdb/cosmic-text, iced's text stack); it only parses the system's installed fonts" },
+]
+
+[licenses]
+version = 2
+# Everything must be compatible with our GPL-3.0-or-later license.
+allow = [
+    "GPL-3.0-or-later",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "CC0-1.0",
+    "ISC",
+    "MIT",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Zlib",
+]
+
+[bans]
+multiple-versions = "warn"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

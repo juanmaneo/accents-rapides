@@ -1,0 +1,24 @@
+# crates/fcitx5/Cargo.toml
+[package]
+name = "accents-rapides-fcitx5"
+description = "Fcitx5 integration for accents-rapides"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+# The one crate that cannot inherit the workspace lints: the Fcitx5 C ABI
+# needs `unsafe` (raw pointers, CString ownership transfer). Keep all unsafe
+# code in this crate, and keep it small.
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage)'] }
+
+[dependencies]
+accents-rapides-core = { path = "../core" }
+tracing = "0.1"
+thiserror = "1.0"
+
+[dev-dependencies]
+accents-rapides-test-support = { path = "../test-support" }
+anyhow = "1.0"

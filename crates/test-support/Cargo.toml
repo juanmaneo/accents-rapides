@@ -1,0 +1,17 @@
+# crates/test-support/Cargo.toml
+[package]
+name = "accents-rapides-test-support"
+description = "Shared test helpers for the accents-rapides workspace (dev-dependency only)"
+publish = false
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+accents-rapides-core = { path = "../core" }
+tempfile = "3.10"

@@ -1,0 +1,75 @@
+[workspace]
+# Resolver 3 prefers dependency versions compatible with `rust-version`.
+resolver = "3"
+members = [
+    "crates/core",
+    "crates/fcitx5",
+    "crates/editor",
+    "crates/overlay",
+    "crates/test-support",
+    "xtask"
+]
+
+# Package metadata shared by every member (`<key>.workspace = true`).
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/juanmaneo/accents-rapides"
+# MSRV, checked by `cargo xtask msrv`. Floor set by the dependency tree
+# (highest `rust-version` in Cargo.lock: smol_str 0.3.6 -> 1.89). Not the
+# development toolchain, which is pinned in rust-toolchain.toml.
+rust-version = "1.89"
+
+# Dependencies shared by several members (`<name>.workspace = true`).
+[workspace.dependencies]
+# One UI toolkit for the editor and the overlay. The CPU renderer is plenty
+# for text-only UIs and avoids pulling in a GPU stack.
+iced = { version = "0.14", default-features = false, features = ["tiny-skia", "crisp", "thread-pool", "wayland", "x11"] }
+
+# Toolchain of the native Fcitx5 addon (crates/fcitx5/cpp), built by
+# `cargo xtask fcitx5`, which enforces these. They are minimum versions (the
+# ones it was tested with): newer releases are fine. Both compilers are
+# required because each catches mistakes the other misses.
+[workspace.metadata.cpp]
+standard = "c++23"
+fcitx5 = "5.1.22"
+
+[workspace.metadata.cpp.compilers]
+"g++" = "16.1.0"
+"clang++" = "22.1.8"
+
+# Lints shared by every member (`[lints] workspace = true`). The only crate
+# with its own table is accents-rapides-fcitx5, which has to speak C.
+[workspace.lints.rust]
+# This tool sits between the keyboard and every application: no unsafe code
+# outside the single FFI crate.
+unsafe_code = "forbid"
+# cargo-llvm-cov sets cfg(coverage) during measurement runs.
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage)'] }
+
+[package]
+name = "accents-rapides"
+description = "Rust port of schnelle-umlaute - a keyboard utility for quick access to special characters"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = "1.0"
+accents-rapides-core = { path = "crates/core" }
+accents-rapides-editor = { path = "crates/editor" }
+accents-rapides-overlay = { path = "crates/overlay" }
+
+[dev-dependencies]
+accents-rapides-test-support = { path = "crates/test-support" }
+assert_cmd = "2.0"
+predicates = "2.0"

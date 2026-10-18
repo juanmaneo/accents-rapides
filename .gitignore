@@ -1,0 +1,10 @@
+/target
+
+# Scratch output from coverage/analysis runs belongs under target/ (so that
+# `cargo clean` removes it); never commit it from the repository root.
+*.log
+*.lcov
+/lcov.info
+/*.json
+!/coverage-ratchet.json
+/*.txt

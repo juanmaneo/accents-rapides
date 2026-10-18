@@ -1,0 +1,4 @@
+# .cargo/config.toml
+
+[alias]
+xtask = "run --package xtask --bin xtask --"

@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  # New RustSec advisories appear without any change on our side.
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: Lint, test and coverage
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      # The only system library needed at build time (pkg-config, for the
+      # overlay's layer-shell stack); Wayland, X11 and Vulkan are dlopen'ed.
+      - name: Install libxkbcommon
+        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev
+      # Installs the toolchain and components pinned in rust-toolchain.toml.
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace
+      # Installs cargo-llvm-cov itself if missing; prebuilt here to save time.
+      - uses: taiki-e/install-action@cargo-llvm-cov
+      - run: cargo xtask coverage
+
+  msrv:
+    name: Minimum supported Rust version
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      # The only system library needed at build time (pkg-config, for the
+      # overlay's layer-shell stack); Wayland, X11 and Vulkan are dlopen'ed.
+      - name: Install libxkbcommon
+        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      # Installs the `rust-version` toolchain from Cargo.toml and checks with it.
+      - run: cargo xtask msrv
+
+  fcitx5:
+    name: Native Fcitx5 addon (g++ and clang++)
+    runs-on: ubuntu-24.04
+    # Ubuntu 24.04 ships GCC 13/14 and Clang 18, below the minimums in
+    # Cargo.toml [workspace.metadata.cpp]; Arch Linux tracks current releases.
+    container: archlinux:latest
+    steps:
+      - name: Install the C++ toolchain, Fcitx5 and rustup
+        run: pacman -Syu --noconfirm --needed base-devel clang fcitx5 pkgconf rustup git
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      # Checks the compiler and Fcitx5 versions, builds the addon with both
+      # compilers, runs the C ABI test under ASan and UBSan, and the
+      # integration test inside Fcitx5 (its testing addons ship with fcitx5).
+      - run: cargo xtask fcitx5 test
+
+  freebsd:
+    name: FreeBSD (tests and native Fcitx5 addon)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      # A FreeBSD VM (QEMU) on the Linux runner; the sources are copied in.
+      - uses: vmactions/freebsd-vm@v1
+        with:
+          release: "15.1"
+          mem: 8192
+          copyback: false
+          prepare: |
+            # The quarterly package branch is behind the minimum Fcitx5 and
+            # LLVM versions of Cargo.toml [workspace.metadata.cpp].
+            mkdir -p /usr/local/etc/pkg/repos
+            echo 'FreeBSD-ports: { url: "pkg+https://pkg.FreeBSD.org/${ABI}/latest" }' > /usr/local/etc/pkg/repos/FreeBSD.conf
+            pkg update -f
+            # Both compilers build against the system's libc++, which the
+            # Fcitx5 package is built with.
+            pkg install -y fcitx5 llvm22 gcc16 pkgconf git rustup-init libxkbcommon wayland
+            rustup-init -y --profile minimal
+          run: |
+            . "$HOME/.cargo/env"
+            cargo test --workspace
+            cargo xtask fcitx5 test
+
+  audit:
+    name: Security audit
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      # `cargo xtask audit` installs missing tools itself; prebuilt binaries
+      # just avoid compiling them on every run.
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit,cargo-deny
+      - run: cargo xtask audit

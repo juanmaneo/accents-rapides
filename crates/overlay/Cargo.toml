@@ -1,0 +1,34 @@
+# crates/overlay/Cargo.toml
+[package]
+name = "accents-rapides-overlay"
+description = "Cycle overlay for accents-rapides: an iced wlr-layer-shell surface"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+accents-rapides-core = { path = "../core" }
+anyhow = "1.0"
+# The GPU renderer is needed for transparency: the CPU one presents through
+# softbuffer, whose Wayland buffers have no alpha channel (Xrgb8888). iced
+# falls back to the CPU renderer when no GPU is available.
+iced = { workspace = true, features = ["wgpu"] }
+# The layer-shell surface: iced's own windows (winit) cannot be overlays.
+iced_layershell = { version = "0.19", default-features = false }
+# Not used directly. iced_layershell 0.19.1 asks for winit-core
+# "0.31.0-beta.2", which also matches beta.3, and beta.3 breaks its build
+# (non-exhaustive match in iced_exdevtools). Remove with the next
+# iced_layershell release.
+winit-core = "=0.31.0-beta.2"
+tracing-subscriber = "0.3"
+
+[dev-dependencies]
+accents-rapides-test-support = { path = "../test-support" }
+anyhow = "1.0"
+assert_cmd = "2.0"
+predicates = "2.0"
