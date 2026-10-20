@@ -71,6 +71,10 @@ jobs:
 
   freebsd:
     name: FreeBSD (tests and native Fcitx5 addon)
+    # Disabled: the runner runs out of disk space ("No space left on device")
+    # with the FreeBSD VM plus the LLVM and GCC packages. Remove this line to
+    # re-enable the job.
+    if: false
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4

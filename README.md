@@ -360,7 +360,8 @@ catch newly published advisories:
 - **msrv**: `cargo xtask msrv`
 - **fcitx5**: `cargo xtask fcitx5 test` in an Arch Linux container, since
   Ubuntu's compilers are older than the minimums
-- **freebsd**: `cargo test --workspace` and `cargo xtask fcitx5 test` in a FreeBSD
+- **freebsd** (currently disabled with `if: false`: the runner runs out of disk
+  space): `cargo test --workspace` and `cargo xtask fcitx5 test` in a FreeBSD
   15.1 VM (QEMU, through [`vmactions/freebsd-vm`](https://github.com/vmactions/freebsd-vm))
   with the `latest` package branch. The security audit is not repeated there:
   it works on `Cargo.lock`, which is the same on every system, and `deny.toml`
