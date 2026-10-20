@@ -23,11 +23,16 @@ fn release(key: &str) -> KeyEvent<'_> {
     key_event(key, 30, key_flags::RELEASE)
 }
 
+/// A press of the default leader, Alt: a modifier, on a key of its own.
+fn leader() -> KeyEvent<'static> {
+    key_event("alt", 64, key_flags::MODIFIER)
+}
+
 /// Hold "a", press the leader and release "a" in `session`, from kitty:
 /// what the leader committed.
 fn type_umlaut_a(addon: &mut FcitxAddon, session: &mut Session) -> Option<String> {
-    let mut actions = [press("a"), press("space"), release("a")]
-        .map(|event| addon.key_event(session, "kitty", &event));
+    let mut actions =
+        [press("a"), leader(), release("a")].map(|event| addon.key_event(session, "kitty", &event));
     actions[1].commit.take()
 }
 
@@ -262,13 +267,7 @@ fn test_addon_feeds_the_overlay_while_cycling() -> Result<()> {
     // Only changes are sent: holding "e", or typing "z" once hidden, sends
     // nothing.
     let messages = overlay_messages(&temp, || {
-        for event in [
-            press("e"),
-            press("space"),
-            press("space"),
-            release("e"),
-            press("z"),
-        ] {
+        for event in [press("e"), leader(), leader(), release("e"), press("z")] {
             addon.key_event(&mut session, "kitty", &event);
         }
     })?;
@@ -277,7 +276,7 @@ fn test_addon_feeds_the_overlay_while_cycling() -> Result<()> {
     // Resetting the window hides the overlay too.
     let messages = overlay_messages(&temp, || {
         addon.key_event(&mut session, "kitty", &press("e"));
-        addon.key_event(&mut session, "kitty", &press("space"));
+        addon.key_event(&mut session, "kitty", &leader());
         addon.reset(&mut session);
     })?;
     assert_eq!(messages, [show(0), OverlayMessage::Hide]);
@@ -286,7 +285,7 @@ fn test_addon_feeds_the_overlay_while_cycling() -> Result<()> {
     addon.handler_mut().config_mut().show_overlay = false;
     let messages = overlay_messages(&temp, || {
         addon.key_event(&mut session, "kitty", &press("e"));
-        addon.key_event(&mut session, "kitty", &press("space"));
+        addon.key_event(&mut session, "kitty", &leader());
     })?;
     assert!(messages.is_empty());
     Ok(())
@@ -311,7 +310,7 @@ fn test_addon_persists_usage_counts() -> Result<()> {
     // ...or by a reset while cycling.
     map_cycling_e(&mut addon);
     addon.key_event(&mut session, "kitty", &press("e"));
-    addon.key_event(&mut session, "kitty", &press("space"));
+    addon.key_event(&mut session, "kitty", &leader());
     addon.reset(&mut session);
     assert_eq!(
         fs::read_to_string(&usage_file)?,
@@ -349,7 +348,7 @@ fn test_addon_starts_with_variants_sorted_by_usage() -> Result<()> {
     let mut addon = temp.with(FcitxAddon::new)?;
     let mut session = Session::default();
     addon.key_event(&mut session, "kitty", &press("e"));
-    let action = addon.key_event(&mut session, "kitty", &press("space"));
+    let action = addon.key_event(&mut session, "kitty", &leader());
     assert_eq!(action.preedit.as_deref(), Some("è"));
     Ok(())
 }
@@ -404,7 +403,7 @@ fn test_addon_without_an_overlay_socket() -> Result<()> {
     map_cycling_e(&mut addon);
     let mut session = Session::default();
     addon.key_event(&mut session, "kitty", &press("e"));
-    let action = addon.key_event(&mut session, "kitty", &press("space"));
+    let action = addon.key_event(&mut session, "kitty", &leader());
     assert_eq!(action.preedit.as_deref(), Some("é"));
     Ok(())
 }

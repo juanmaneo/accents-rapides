@@ -45,8 +45,12 @@ fn test_message_shows_only_while_cycling() {
     // Holding a mapped key alone shows nothing.
     handler.handle_key(&mut session, &press("e", 1));
     assert_eq!(OverlayMessage::of(&handler, &session), OverlayMessage::Hide);
-    // The leader starts the cycle.
-    handler.handle_key(&mut session, &press("space", 2));
+    // The leader (Alt by default) starts the cycle.
+    let alt = KeyEvent {
+        is_modifier: true,
+        ..press("alt", 64)
+    };
+    handler.handle_key(&mut session, &alt);
     assert_eq!(OverlayMessage::of(&handler, &session), show(&["é", "è"], 0));
 }
 

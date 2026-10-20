@@ -169,7 +169,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            leader_key: LeaderKey::Space,
+            leader_key: LeaderKey::Alt,
             time_window_ms: 500,
             show_overlay: true,
             overlay_position: (0, 0),

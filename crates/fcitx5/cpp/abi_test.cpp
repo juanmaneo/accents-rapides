@@ -46,7 +46,7 @@ constexpr std::uint32_t kA = 38;
 constexpr std::uint32_t kO = 32;
 constexpr std::uint32_t kC = 54;
 constexpr std::uint32_t kX = 53;
-constexpr std::uint32_t kSpace = 65;
+constexpr std::uint32_t kAlt = 64;
 constexpr std::uint32_t kShift = 50;
 
 /// The addon and the gesture state of one window.
@@ -67,6 +67,11 @@ FcitxAccentsRapidesAction release(const Window &w, std::string_view key, std::ui
     return send(w, key, code, key_flag::release);
 }
 
+/// Press the default leader, Alt: a modifier key.
+FcitxAccentsRapidesAction leader(const Window &w, std::uint32_t flags = 0) {
+    return send(w, key_name::alt, kAlt, flags | key_flag::modifier);
+}
+
 FcitxAccentsRapidesAction reset(const Window &w) {
     return fcitx_accents_rapides_reset(w.core.get(), w.session.get());
 }
@@ -75,9 +80,10 @@ void gestures(const Window &w) {
     // A mapped key shows as preedit; the leader commits its only variant;
     // the release of the committed key is swallowed.
     expect(send(w, "a", kA), nullptr, "a", false);
-    expect(send(w, key_name::space, kSpace), "ä", nullptr, false);
+    expect(leader(w), "ä", nullptr, false);
     expect(release(w, "a", kA), nullptr, nullptr, false);
-    static_cast<void>(release(w, key_name::space, kSpace));
+    // The release of the leader is swallowed too.
+    expect(release(w, key_name::alt, kAlt), nullptr, nullptr, false);
 
     // Unmapped keys and modifiers go through.
     expect(send(w, "x", kX), nullptr, nullptr, true);
@@ -86,9 +92,9 @@ void gestures(const Window &w) {
 
     // Shift selects the uppercase mapping.
     expect(send(w, "A", kA, key_flag::shift), nullptr, "A", false);
-    expect(send(w, key_name::space, kSpace, key_flag::shift), "Ä", nullptr, false);
+    expect(leader(w, key_flag::shift), "Ä", nullptr, false);
     static_cast<void>(release(w, "A", kA));
-    static_cast<void>(release(w, key_name::space, kSpace));
+    static_cast<void>(release(w, key_name::alt, kAlt));
     static_cast<void>(release(w, "", kShift));
 }
 
@@ -104,13 +110,13 @@ void shortcuts(const Window &w) {
 
 void windows(const Core &core) {
     // A key held in one window is not held in another, where the leader is
-    // an ordinary key and there is nothing to reset.
+    // just a modifier and there is nothing to reset.
     const Window first{core};
     const Window second{core};
     expect(send(first, "o", kO), nullptr, "o", false);
-    expect(send(second, key_name::space, kSpace), nullptr, nullptr, true);
+    expect(leader(second), nullptr, nullptr, true);
     expect(reset(second), nullptr, nullptr, false);
-    expect(send(first, key_name::space, kSpace), "ö", nullptr, false);
+    expect(leader(first), "ö", nullptr, false);
 }
 
 void resetAndReload(const Window &w) {

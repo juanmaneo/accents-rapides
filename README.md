@@ -14,7 +14,7 @@ The implementation uses:
 
 ## Features
 
-- Hold a mapped key, then press the leader key (default: Space) to type an accent character
+- Hold a mapped key, then press the leader key (default: Alt) to type an accent character
 - Accent cycling: press the leader key repeatedly to cycle through variants (é → è → ê → ë), forward or backward
 - Sort variants by usage: optionally order each key's cycle by how often you use them
 - Snippets: map single keys to entire text phrases
@@ -128,10 +128,13 @@ cargo run -- config
 ```
 
 With the Accents Rapides input method active:
-- Hold a mapped key (e.g. `a`), then press <kbd>Space</kbd> to insert `ä`
+- Hold a mapped key (e.g. `a`), then press <kbd>Alt</kbd>, the default leader key, to insert `ä`
 - Press the leader key repeatedly to cycle through variants (e.g. `e` → é → è → ê);
   while you cycle, the overlay shows every variant with the current one highlighted
 - Release the key without pressing the leader to type the normal letter
+- Alt pressed on its own, or with keys that are not part of a gesture, still reaches
+  applications, so their Alt shortcuts keep working. Another leader (Space, AltGr, an
+  arrow or a custom key) can be chosen in the editor or in `config.toml`
 
 Each window keeps its own gesture: a key held in one window never commits in
 another.
@@ -140,13 +143,13 @@ another.
 
 | Hold | + | Press | = | Result |
 |------|---|-------|---|--------|
-| <kbd>a</kbd> | + | <kbd>Space</kbd> | = | ä |
-| <kbd>o</kbd> | + | <kbd>Space</kbd> | = | ö |
-| <kbd>u</kbd> | + | <kbd>Space</kbd> | = | ü |
-| <kbd>s</kbd> | + | <kbd>Space</kbd> | = | ß |
-| <kbd>Shift</kbd>+<kbd>a</kbd> | + | <kbd>Space</kbd> | = | Ä |
-| <kbd>Shift</kbd>+<kbd>o</kbd> | + | <kbd>Space</kbd> | = | Ö |
-| <kbd>Shift</kbd>+<kbd>u</kbd> | + | <kbd>Space</kbd> | = | Ü |
+| <kbd>a</kbd> | + | <kbd>Alt</kbd> | = | ä |
+| <kbd>o</kbd> | + | <kbd>Alt</kbd> | = | ö |
+| <kbd>u</kbd> | + | <kbd>Alt</kbd> | = | ü |
+| <kbd>s</kbd> | + | <kbd>Alt</kbd> | = | ß |
+| <kbd>Shift</kbd>+<kbd>a</kbd> | + | <kbd>Alt</kbd> | = | Ä |
+| <kbd>Shift</kbd>+<kbd>o</kbd> | + | <kbd>Alt</kbd> | = | Ö |
+| <kbd>Shift</kbd>+<kbd>u</kbd> | + | <kbd>Alt</kbd> | = | Ü |
 
 All mappings are fully customizable: add French, Spanish, emoji, Braille, or any Unicode character.
 
@@ -155,7 +158,7 @@ All mappings are fully customizable: add French, Spanish, emoji, Braille, or any
 Three files live in `~/.config/accents-rapides/` (`accents-rapides config` prints their
 paths). The first two are created with defaults on first run:
 
-- `config.toml`: the leader key and time window, whether to show the overlay, the app
+- `config.toml`: the leader key (`leader_key = "Alt"` by default) and time window, whether to show the overlay, the app
   filter (blacklist/whitelist) mode and entries, and whether to sort variants by usage
 - `mappings.toml`: the profiles, their mappings, and which profile is current:
 

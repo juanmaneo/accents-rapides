@@ -188,7 +188,7 @@ mod tests {
     // coverage counters recorded (unreferenced symbols are dropped from
     // test binaries, which otherwise leaves stale zero-count records).
     use super::*;
-    use crate::key_flags::RELEASE;
+    use crate::key_flags::{MODIFIER, RELEASE};
     use accents_rapides_core::{KeyMapping, MappingKey, MappingProfile};
     use accents_rapides_test_support::{with_temp_config, TempConfig};
     use std::ffi::{CStr, CString};
@@ -218,6 +218,18 @@ mod tests {
         fcitx_accents_rapides_key_event(addon, session, program.as_ptr(), key.as_ptr(), 30, flags)
     }
 
+    /// Press the default leader, Alt (a modifier, on a key of its own).
+    unsafe fn leader(addon: *mut FcitxAddon, session: *mut Session) -> FcitxAccentsRapidesAction {
+        fcitx_accents_rapides_key_event(
+            addon,
+            session,
+            c"test".as_ptr(),
+            c"alt".as_ptr(),
+            64,
+            MODIFIER,
+        )
+    }
+
     /// Run `f` with a fresh addon and session, then destroy both.
     fn with_addon(f: impl FnOnce(*mut FcitxAddon, *mut Session)) {
         with_temp_config(|| unsafe {
@@ -239,7 +251,7 @@ mod tests {
             assert!(!action.forward);
 
             // The leader commits the default mapping's only variant.
-            let action = send(addon, session, "space", 0);
+            let action = leader(addon, session);
             assert_eq!(strings(&action), (Some("ä".to_string()), None));
             assert!(!action.forward);
 
@@ -264,17 +276,14 @@ mod tests {
             let other = fcitx_accents_rapides_session_create();
 
             // "a" is held in one window: the leader in another one is just
-            // a key, and resetting that one hands back nothing.
+            // a modifier, and resetting that one hands back nothing.
             send(addon, session, "a", 0);
-            assert!(send(addon, other, "space", 0).forward);
+            assert!(leader(addon, other).forward);
             assert_eq!(
                 strings(&fcitx_accents_rapides_reset(addon, other)),
                 (None, None)
             );
-            assert_eq!(
-                strings(&send(addon, session, "space", 0)).0.as_deref(),
-                Some("ä")
-            );
+            assert_eq!(strings(&leader(addon, session)).0.as_deref(), Some("ä"));
 
             fcitx_accents_rapides_session_destroy(other);
         });
@@ -383,7 +392,7 @@ mod tests {
             assert!(manager.set_current_profile("Nul"));
 
             send(addon, session, "z", 0);
-            let action = send(addon, session, "space", 0);
+            let action = leader(addon, session);
             assert!(action.commit.is_null());
             assert!(!action.forward);
         });
