@@ -28,11 +28,11 @@ fn leader() -> KeyEvent<'static> {
     key_event("alt", 64, key_flags::MODIFIER)
 }
 
-/// Hold "a", press the leader and release "a" in `session`, from kitty:
-/// what the leader committed.
-fn type_umlaut_a(addon: &mut FcitxAddon, session: &mut Session) -> Option<String> {
+/// Hold "s", press the leader and release "s" in `session`, from kitty:
+/// what the leader committed (ß, the only variant of "s").
+fn type_eszett(addon: &mut FcitxAddon, session: &mut Session) -> Option<String> {
     let mut actions =
-        [press("a"), leader(), release("a")].map(|event| addon.key_event(session, "kitty", &event));
+        [press("s"), leader(), release("s")].map(|event| addon.key_event(session, "kitty", &event));
     actions[1].commit.take()
 }
 
@@ -107,17 +107,14 @@ fn test_addon_reload() -> Result<()> {
     let mut addon = temp.with(FcitxAddon::new)?;
     let mut session = Session::default();
     addon.handler_mut().config_mut().time_window_ms = 7;
-    assert_eq!(
-        type_umlaut_a(&mut addon, &mut session).as_deref(),
-        Some("ä")
-    );
+    assert_eq!(type_eszett(&mut addon, &mut session).as_deref(), Some("ß"));
 
     // Reloading starts over with the files on disk: the configuration, and
     // the usage counts saved by the commit above.
     temp.with(|| addon.reload())?;
     assert_eq!(addon.handler().config().time_window_ms, 500);
     let stats = &addon.handler().mapping_manager().usage_stats;
-    assert_eq!(stats[&MappingKey::Char('a')]["ä"], 1);
+    assert_eq!(stats[&MappingKey::Char('s')]["ß"], 1);
 
     // A failed reload keeps the current state.
     let result = TempConfig::unwritable().with(|| addon.reload());
@@ -191,8 +188,8 @@ fn test_addon_refresh_reloads_changed_mappings() -> Result<()> {
     let mut mappings = MappingManager::new();
     let mut profile = MappingProfile::new("Mine");
     profile.mappings.insert(
-        MappingKey::Char('n'),
-        KeyMapping::new(vec!["ñ".to_string()]),
+        MappingKey::Char('y'),
+        KeyMapping::new(vec!["ý".to_string()]),
     );
     mappings.add_profile(profile);
     mappings.set_current_profile("Mine");
@@ -203,8 +200,8 @@ fn test_addon_refresh_reloads_changed_mappings() -> Result<()> {
         addon
             .handler()
             .mapping_manager()
-            .get_characters_for_key(&MappingKey::Char('n')),
-        Some(["ñ".to_string()].as_slice())
+            .get_characters_for_key(&MappingKey::Char('y')),
+        Some(["ý".to_string()].as_slice())
     );
     assert!(!temp.with(|| addon.refresh())?);
 
@@ -216,7 +213,7 @@ fn test_addon_refresh_reloads_changed_mappings() -> Result<()> {
         addon
             .handler()
             .mapping_manager()
-            .get_characters_for_key(&MappingKey::Char('n')),
+            .get_characters_for_key(&MappingKey::Char('y')),
         None
     );
     Ok(())
@@ -304,8 +301,8 @@ fn test_addon_persists_usage_counts() -> Result<()> {
     assert!(!usage_file.exists());
 
     // A variant is counted as soon as it is committed, by the leader...
-    type_umlaut_a(&mut addon, &mut session);
-    assert_eq!(fs::read_to_string(&usage_file)?, "[a]\n\"ä\" = 1\n");
+    type_eszett(&mut addon, &mut session);
+    assert_eq!(fs::read_to_string(&usage_file)?, "[s]\n\"ß\" = 1\n");
 
     // ...or by a reset while cycling.
     map_cycling_e(&mut addon);
@@ -314,7 +311,7 @@ fn test_addon_persists_usage_counts() -> Result<()> {
     addon.reset(&mut session);
     assert_eq!(
         fs::read_to_string(&usage_file)?,
-        "[a]\n\"ä\" = 1\n\n[e]\n\"é\" = 1\n"
+        "[e]\n\"é\" = 1\n\n[s]\n\"ß\" = 1\n"
     );
 
     // The usage file is the addon's own: writing it is not a change to
@@ -324,7 +321,7 @@ fn test_addon_persists_usage_counts() -> Result<()> {
     // The counts survive a restart.
     let addon = temp.with(FcitxAddon::new)?;
     let stats = &addon.handler().mapping_manager().usage_stats;
-    assert_eq!(stats[&MappingKey::Char('a')]["ä"], 1);
+    assert_eq!(stats[&MappingKey::Char('s')]["ß"], 1);
     assert_eq!(stats[&MappingKey::Char('e')]["é"], 1);
     Ok(())
 }
@@ -364,23 +361,17 @@ fn test_addon_tolerates_usage_file_failures() -> Result<()> {
     fs::write(&usage_file, "not = = toml")?;
     let mut addon = temp.with(FcitxAddon::new)?;
     assert!(addon.handler().mapping_manager().usage_stats.is_empty());
-    assert_eq!(
-        type_umlaut_a(&mut addon, &mut session).as_deref(),
-        Some("ä")
-    );
-    assert_eq!(fs::read_to_string(&usage_file)?, "[a]\n\"ä\" = 1\n");
+    assert_eq!(type_eszett(&mut addon, &mut session).as_deref(), Some("ß"));
+    assert_eq!(fs::read_to_string(&usage_file)?, "[s]\n\"ß\" = 1\n");
 
     // A usage file that can be neither read nor written: typing goes on,
     // with the counts in memory.
     fs::remove_file(&usage_file)?;
     fs::create_dir(&usage_file)?;
     let mut addon = temp.with(FcitxAddon::new)?;
-    assert_eq!(
-        type_umlaut_a(&mut addon, &mut session).as_deref(),
-        Some("ä")
-    );
+    assert_eq!(type_eszett(&mut addon, &mut session).as_deref(), Some("ß"));
     let stats = &addon.handler().mapping_manager().usage_stats;
-    assert_eq!(stats[&MappingKey::Char('a')]["ä"], 1);
+    assert_eq!(stats[&MappingKey::Char('s')]["ß"], 1);
     assert!(usage_file.is_dir());
     Ok(())
 }

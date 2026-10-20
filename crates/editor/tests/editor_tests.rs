@@ -192,7 +192,7 @@ fn test_use_and_delete_profiles() {
     click(&mut editor, "Mappings");
     assert!(shows(&editor, "Mappings of Second"));
     assert!(shows(&editor, "é,è"));
-    assert!(!shows(&editor, "ä"));
+    assert!(!shows(&editor, "ß"));
 
     // Now the first row (Default) can be used and deleted.
     click(&mut editor, "Profiles");
@@ -218,10 +218,10 @@ fn test_mappings_tab_lists_current_profile_mappings() {
     let mut editor = default_editor();
     click(&mut editor, "Mappings");
 
-    assert!(shows(&editor, "a"));
-    assert!(shows(&editor, "ä"));
-    assert!(shows(&editor, "Shift+A"));
-    assert!(shows(&editor, "Ä"));
+    assert!(shows(&editor, "s"));
+    assert!(shows(&editor, "ß"));
+    assert!(shows(&editor, "e"));
+    assert!(shows(&editor, "é,è,ê,ë,€"));
     assert!(shows(&editor, "Reverse"));
     assert!(shows(&editor, "Remove"));
 }
@@ -232,29 +232,29 @@ fn test_add_mapping() {
     click(&mut editor, "Mappings");
 
     // No key, an invalid key or a mapped key: the button does nothing.
-    for key in ["", "ab", "a", " shift+a "] {
+    for key in ["", "ab", "a", " e "] {
         editor.update(Message::NewKey(key.to_string()));
         click(&mut editor, "Add mapping");
         assert_eq!(
             editor.mappings().current_profile().unwrap().mappings.len(),
-            7
+            8
         );
     }
     editor.update(Message::NewKey(String::new()));
 
-    type_into(&mut editor, input_id::KEY, "e");
-    type_into(&mut editor, input_id::OUTPUT, "é,è");
-    assert!(shows(&editor, "é,è"));
+    type_into(&mut editor, input_id::KEY, "y");
+    type_into(&mut editor, input_id::OUTPUT, "ý,ÿ");
+    assert!(shows(&editor, "ý,ÿ"));
     click(&mut editor, "Add mapping");
 
     assert_eq!(
-        variants(&editor, MappingKey::Char('e')).as_deref(),
-        Some(["é".to_string(), "è".to_string()].as_slice())
+        variants(&editor, MappingKey::Char('y')).as_deref(),
+        Some(["ý".to_string(), "ÿ".to_string()].as_slice())
     );
     // The new row shows what was typed and the add row is cleared.
-    assert!(shows(&editor, "é,è"));
-    assert_ne!(input_content(&editor, input_id::KEY), "e");
-    assert_ne!(input_content(&editor, input_id::OUTPUT), "é,è");
+    assert!(shows(&editor, "ý,ÿ"));
+    assert_ne!(input_content(&editor, input_id::KEY), "y");
+    assert_ne!(input_content(&editor, input_id::OUTPUT), "ý,ÿ");
 
     // The output may be filled in later.
     type_into(&mut editor, input_id::KEY, "shift+e");

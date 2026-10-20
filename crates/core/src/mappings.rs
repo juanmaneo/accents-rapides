@@ -248,16 +248,17 @@ impl MappingProfile {
 /// Name of the profile created on first run.
 pub const DEFAULT_PROFILE: &str = "Default";
 
-/// The mappings of the profile created on first run: German umlauts and ß,
-/// as in the original schnelle-umlaute.
-const DEFAULT_MAPPINGS: [(MappingKey, &str); 7] = [
-    (MappingKey::Char('a'), "ä"),
-    (MappingKey::Char('o'), "ö"),
-    (MappingKey::Char('u'), "ü"),
-    (MappingKey::Char('s'), "ß"),
-    (MappingKey::ShiftChar('A'), "Ä"),
-    (MappingKey::ShiftChar('O'), "Ö"),
-    (MappingKey::ShiftChar('U'), "Ü"),
+/// The mappings of the profile created on first run: each key and its
+/// variants, in cycle order. Lowercase only: capitals take no accent.
+const DEFAULT_MAPPINGS: [(char, &[&str]); 8] = [
+    ('s', &["ß"]),
+    ('a', &["ä", "á", "à", "â"]),
+    ('o', &["ö", "ó", "ò", "ô"]),
+    ('c', &["ç", "ć", "č"]),
+    ('u', &["ü", "ú", "ù", "û"]),
+    ('e', &["é", "è", "ê", "ë", "€"]),
+    ('n', &["ñ"]),
+    ('i', &["í", "ï", "î", "ì"]),
 ];
 
 /// Main mapping manager that handles all profiles
@@ -472,14 +473,14 @@ impl MappingManager {
         }
     }
 
-    /// Add the [`DEFAULT_PROFILE`] (as in the original schnelle-umlaute) and
-    /// make it current
+    /// Add the [`DEFAULT_PROFILE`] and make it current
     pub fn load_default_mappings(&mut self) {
         let mut profile = MappingProfile::new(DEFAULT_PROFILE);
-        for (key, character) in DEFAULT_MAPPINGS {
+        for (key, variants) in DEFAULT_MAPPINGS {
+            let variants = variants.iter().map(|v| v.to_string()).collect();
             profile
                 .mappings
-                .insert(key, KeyMapping::new(vec![character.to_string()]));
+                .insert(MappingKey::Char(key), KeyMapping::new(variants));
         }
         self.add_profile(profile);
         self.set_current_profile(DEFAULT_PROFILE);

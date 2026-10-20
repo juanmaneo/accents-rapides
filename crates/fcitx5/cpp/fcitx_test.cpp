@@ -57,6 +57,7 @@ struct PhysicalKey {
 
 constexpr PhysicalKey kA{FcitxKey_a, 38};
 constexpr PhysicalKey kShiftA{FcitxKey_A, 38};
+constexpr PhysicalKey kS{FcitxKey_s, 39};
 constexpr PhysicalKey kO{FcitxKey_o, 32};
 constexpr PhysicalKey kX{FcitxKey_x, 53};
 /// The default leader.
@@ -64,7 +65,8 @@ constexpr PhysicalKey kAlt{FcitxKey_Alt_L, 64};
 constexpr PhysicalKey kShift{FcitxKey_Shift_L, 50};
 
 static_assert(kA.code == kShiftA.code, "Shift changes the symbol, not the key");
-static_assert(kA.code != kO.code && kO.code != kX.code && kX.code != kAlt.code);
+static_assert(kA.code != kS.code && kS.code != kO.code && kO.code != kX.code &&
+              kX.code != kAlt.code);
 
 fcitx::Key key(PhysicalKey physical, fcitx::KeyStates states = fcitx::KeyStates{}) {
     return fcitx::Key{physical.sym, states, physical.code};
@@ -180,9 +182,9 @@ void gestures(Server &server) {
     Window w{server};
     // A mapped key shows as preedit; the leader commits its only variant;
     // the release of the committed key is swallowed.
-    expect(w.press(kA), {.taken = true, .commit = "", .preedit = "a"});
-    expect(w.press(kAlt), {.taken = true, .commit = "ä", .preedit = ""});
-    expect(w.release(kA, fcitx::KeyState::Alt), {.taken = true, .commit = "", .preedit = ""});
+    expect(w.press(kS), {.taken = true, .commit = "", .preedit = "s"});
+    expect(w.press(kAlt), {.taken = true, .commit = "ß", .preedit = ""});
+    expect(w.release(kS, fcitx::KeyState::Alt), {.taken = true, .commit = "", .preedit = ""});
     // The release of the leader is swallowed too.
     expect(w.release(kAlt, fcitx::KeyState::Alt), {.taken = true, .commit = "", .preedit = ""});
 
@@ -190,13 +192,20 @@ void gestures(Server &server) {
     expect(w.press(kX), {});
     static_cast<void>(w.release(kX));
 
-    // Shift selects the uppercase mapping.
+    // Uppercase letters have no default mapping.
     expect(w.press(kShift), {});
-    expect(w.press(kShiftA, fcitx::KeyState::Shift), {.taken = true, .commit = "", .preedit = "A"});
-    expect(w.press(kAlt, fcitx::KeyState::Shift), {.taken = true, .commit = "Ä", .preedit = ""});
-    static_cast<void>(w.release(kShiftA, {fcitx::KeyState::Shift, fcitx::KeyState::Alt}));
-    static_cast<void>(w.release(kAlt, {fcitx::KeyState::Shift, fcitx::KeyState::Alt}));
-    static_cast<void>(w.release(kShift, fcitx::KeyState::Shift));
+    expect(w.press(kShiftA, fcitx::KeyState::Shift), {});
+    static_cast<void>(w.release(kShiftA, fcitx::KeyState::Shift));
+    static_cast<void>(w.release(kShift));
+
+    // A key with several variants cycles on each leader press; releasing
+    // the key commits the current one.
+    expect(w.press(kA), {.taken = true, .commit = "", .preedit = "a"});
+    expect(w.press(kAlt), {.taken = true, .commit = "", .preedit = "ä"});
+    static_cast<void>(w.release(kAlt, fcitx::KeyState::Alt));
+    expect(w.press(kAlt), {.taken = true, .commit = "", .preedit = "á"});
+    static_cast<void>(w.release(kAlt, fcitx::KeyState::Alt));
+    expect(w.release(kA, fcitx::KeyState::Alt), {.taken = true, .commit = "á", .preedit = ""});
 }
 
 void windows(Server &server) {
@@ -204,11 +213,11 @@ void windows(Server &server) {
     // just a modifier.
     Window first{server};
     Window second{server};
-    expect(first.press(kO), {.taken = true, .commit = "", .preedit = "o"});
+    expect(first.press(kS), {.taken = true, .commit = "", .preedit = "s"});
     expect(second.press(kAlt), {});
     expect(second.release(kAlt, fcitx::KeyState::Alt), {});
-    expect(first.press(kAlt), {.taken = true, .commit = "ö", .preedit = ""});
-    static_cast<void>(first.release(kO, fcitx::KeyState::Alt));
+    expect(first.press(kAlt), {.taken = true, .commit = "ß", .preedit = ""});
+    static_cast<void>(first.release(kS, fcitx::KeyState::Alt));
     static_cast<void>(first.release(kAlt, fcitx::KeyState::Alt));
 }
 

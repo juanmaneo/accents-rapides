@@ -43,8 +43,9 @@ void expect(const FcitxAccentsRapidesAction &action, const char *commit, const c
 
 // Physical key codes, as distinct values.
 constexpr std::uint32_t kA = 38;
+constexpr std::uint32_t kS = 39;
 constexpr std::uint32_t kO = 32;
-constexpr std::uint32_t kC = 54;
+
 constexpr std::uint32_t kX = 53;
 constexpr std::uint32_t kAlt = 64;
 constexpr std::uint32_t kShift = 50;
@@ -79,9 +80,9 @@ FcitxAccentsRapidesAction reset(const Window &w) {
 void gestures(const Window &w) {
     // A mapped key shows as preedit; the leader commits its only variant;
     // the release of the committed key is swallowed.
-    expect(send(w, "a", kA), nullptr, "a", false);
-    expect(leader(w), "ä", nullptr, false);
-    expect(release(w, "a", kA), nullptr, nullptr, false);
+    expect(send(w, "s", kS), nullptr, "s", false);
+    expect(leader(w), "ß", nullptr, false);
+    expect(release(w, "s", kS), nullptr, nullptr, false);
     // The release of the leader is swallowed too.
     expect(release(w, key_name::alt, kAlt), nullptr, nullptr, false);
 
@@ -91,19 +92,26 @@ void gestures(const Window &w) {
     expect(send(w, "", kShift, key_flag::shift | key_flag::modifier), nullptr, nullptr, true);
 
     // Shift selects the uppercase mapping.
-    expect(send(w, "A", kA, key_flag::shift), nullptr, "A", false);
-    expect(leader(w, key_flag::shift), "Ä", nullptr, false);
+    expect(send(w, "A", kA, key_flag::shift), nullptr, nullptr, true);
     static_cast<void>(release(w, "A", kA));
-    static_cast<void>(release(w, key_name::alt, kAlt));
     static_cast<void>(release(w, "", kShift));
+
+    // A key with several variants cycles on each leader press; releasing
+    // the key commits the current one.
+    expect(send(w, "a", kA), nullptr, "a", false);
+    expect(leader(w), nullptr, "ä", false);
+    static_cast<void>(release(w, key_name::alt, kAlt));
+    expect(leader(w), nullptr, "á", false);
+    static_cast<void>(release(w, key_name::alt, kAlt));
+    expect(release(w, "a", kA), "á", nullptr, false);
 }
 
 void shortcuts(const Window &w) {
     // A shortcut commits the pending key and goes through.
     for (const std::uint32_t modifier : {key_flag::ctrl, key_flag::alt, key_flag::super}) {
         expect(send(w, "o", kO), nullptr, "o", false);
-        expect(send(w, "c", kC, modifier), "o", nullptr, true);
-        static_cast<void>(release(w, "c", kC));
+        expect(send(w, "x", kX, modifier), "o", nullptr, true);
+        static_cast<void>(release(w, "x", kX));
         static_cast<void>(release(w, "o", kO));
     }
 }
@@ -113,10 +121,10 @@ void windows(const Core &core) {
     // just a modifier and there is nothing to reset.
     const Window first{core};
     const Window second{core};
-    expect(send(first, "o", kO), nullptr, "o", false);
+    expect(send(first, "s", kS), nullptr, "s", false);
     expect(leader(second), nullptr, nullptr, true);
     expect(reset(second), nullptr, nullptr, false);
-    expect(leader(first), "ö", nullptr, false);
+    expect(leader(first), "ß", nullptr, false);
 }
 
 void resetAndReload(const Window &w) {

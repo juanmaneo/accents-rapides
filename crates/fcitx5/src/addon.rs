@@ -245,18 +245,18 @@ mod tests {
     #[test]
     fn c_abi_gesture_cycle() {
         with_addon(|addon, session| unsafe {
-            // Pressing "a" shows it as preedit and swallows the key.
-            let action = send(addon, session, "a", 0);
-            assert_eq!(strings(&action), (None, Some("a".to_string())));
+            // Pressing "s" shows it as preedit and swallows the key.
+            let action = send(addon, session, "s", 0);
+            assert_eq!(strings(&action), (None, Some("s".to_string())));
             assert!(!action.forward);
 
             // The leader commits the default mapping's only variant.
             let action = leader(addon, session);
-            assert_eq!(strings(&action), (Some("ä".to_string()), None));
+            assert_eq!(strings(&action), (Some("ß".to_string()), None));
             assert!(!action.forward);
 
             // The release of the committed key is swallowed too.
-            let action = send(addon, session, "a", RELEASE);
+            let action = send(addon, session, "s", RELEASE);
             assert_eq!(strings(&action), (None, None));
             assert!(!action.forward);
 
@@ -275,15 +275,15 @@ mod tests {
         with_addon(|addon, session| unsafe {
             let other = fcitx_accents_rapides_session_create();
 
-            // "a" is held in one window: the leader in another one is just
+            // "s" is held in one window: the leader in another one is just
             // a modifier, and resetting that one hands back nothing.
-            send(addon, session, "a", 0);
+            send(addon, session, "s", 0);
             assert!(leader(addon, other).forward);
             assert_eq!(
                 strings(&fcitx_accents_rapides_reset(addon, other)),
                 (None, None)
             );
-            assert_eq!(strings(&leader(addon, session)).0.as_deref(), Some("ä"));
+            assert_eq!(strings(&leader(addon, session)).0.as_deref(), Some("ß"));
 
             fcitx_accents_rapides_session_destroy(other);
         });

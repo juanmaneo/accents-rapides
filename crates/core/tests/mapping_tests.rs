@@ -95,8 +95,12 @@ fn test_mappings_file_round_trip() -> Result<()> {
         },
     );
     french.mappings.insert(
+        MappingKey::ShiftChar('E'),
+        KeyMapping::new(vec!["É".to_string()]),
+    );
+    french.mappings.insert(
         MappingKey::Special("Space".to_string()),
-        KeyMapping::new(vec![" ".to_string()]),
+        KeyMapping::new(vec![" ".to_string()]),
     );
     manager.add_profile(french);
     manager.add_profile(MappingProfile::new("Empty"));
@@ -110,8 +114,8 @@ fn test_mappings_file_round_trip() -> Result<()> {
         "{text}"
     );
     assert!(text
-        .contains("[profiles.Default.mappings.a]\ncharacters = [\"ä\"]\nreverse_cycle = false\n"));
-    assert!(text.contains("[profiles.Default.mappings.\"Shift+A\"]\n"));
+        .contains("[profiles.Default.mappings.s]\ncharacters = [\"ß\"]\nreverse_cycle = false\n"));
+    assert!(text.contains("[profiles.French.mappings.\"Shift+E\"]\n"));
     assert!(text.contains("[profiles.French.mappings.e]\ncharacters = ["));
     assert!(text.contains("reverse_cycle = true\n"));
     assert!(text.contains("[profiles.Empty.mappings]\n"));
@@ -205,7 +209,7 @@ fn test_mappings_load_or_create_at() -> Result<()> {
     let created = MappingManager::load_or_create_at(&path)?;
     assert!(path.exists());
     assert_eq!(created.current_profile.as_deref(), Some(DEFAULT_PROFILE));
-    assert_eq!(created.current_profile().unwrap().mappings.len(), 7);
+    assert_eq!(created.current_profile().unwrap().mappings.len(), 8);
 
     // Existing: loaded as is.
     fs::write(&path, "[profiles.Mine.mappings.n]\ncharacters = [\"ñ\"]\n")?;
@@ -368,17 +372,22 @@ fn test_mapping_manager() {
     assert!(manager.current_profile().is_some());
     assert_eq!(manager.current_profile().unwrap().name, "Default");
 
-    // Test that default mappings are loaded
+    // Test that default mappings are loaded, lowercase only
     let profile = manager.current_profile().unwrap();
-    assert!(profile.mappings.contains_key(&MappingKey::Char('a')));
-    assert!(profile.mappings.contains_key(&MappingKey::Char('o')));
-    assert!(profile.mappings.contains_key(&MappingKey::Char('u')));
-    assert!(profile.mappings.contains_key(&MappingKey::ShiftChar('A')));
+    let keys: String = profile
+        .mappings
+        .keys()
+        .map(|key| match key {
+            MappingKey::Char(c) => *c,
+            other => panic!("unexpected default key {other}"),
+        })
+        .collect();
+    assert_eq!(keys, "saocueni");
 
-    // Test character retrieval
+    // Test character retrieval, in cycle order
     assert_eq!(
-        manager.get_characters_for_key(&MappingKey::Char('a')),
-        Some(vec!["ä".to_string()].as_slice())
+        manager.get_characters_for_key(&MappingKey::Char('e')),
+        Some(["é", "è", "ê", "ë", "€"].map(String::from).as_slice())
     );
     assert_eq!(
         manager.get_characters_for_key(&MappingKey::Char('s')),

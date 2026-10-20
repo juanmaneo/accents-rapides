@@ -226,7 +226,7 @@ fn test_load_or_create_uses_default_config_path() -> Result<()> {
     assert_eq!(config.mappings_path(), Some(mappings_file));
     assert_eq!(
         mappings.get_characters_for_key(&MappingKey::Char('a')),
-        Some(["ä".to_string()].as_slice())
+        Some(["ä", "á", "à", "â"].map(String::from).as_slice())
     );
 
     Ok(())

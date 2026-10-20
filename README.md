@@ -205,13 +205,14 @@ To remove it: delete the entry you created (for the service, `systemctl --user d
 
 | Hold | + | Press | = | Result |
 |------|---|-------|---|--------|
-| <kbd>a</kbd> | + | <kbd>Alt</kbd> | = | ä |
-| <kbd>o</kbd> | + | <kbd>Alt</kbd> | = | ö |
-| <kbd>u</kbd> | + | <kbd>Alt</kbd> | = | ü |
 | <kbd>s</kbd> | + | <kbd>Alt</kbd> | = | ß |
-| <kbd>Shift</kbd>+<kbd>a</kbd> | + | <kbd>Alt</kbd> | = | Ä |
-| <kbd>Shift</kbd>+<kbd>o</kbd> | + | <kbd>Alt</kbd> | = | Ö |
-| <kbd>Shift</kbd>+<kbd>u</kbd> | + | <kbd>Alt</kbd> | = | Ü |
+| <kbd>a</kbd> | + | <kbd>Alt</kbd> | = | ä á à â |
+| <kbd>o</kbd> | + | <kbd>Alt</kbd> | = | ö ó ò ô |
+| <kbd>c</kbd> | + | <kbd>Alt</kbd> | = | ç ć č |
+| <kbd>u</kbd> | + | <kbd>Alt</kbd> | = | ü ú ù û |
+| <kbd>e</kbd> | + | <kbd>Alt</kbd> | = | é è ê ë € |
+| <kbd>n</kbd> | + | <kbd>Alt</kbd> | = | ñ |
+| <kbd>i</kbd> | + | <kbd>Alt</kbd> | = | í ï î ì |
 
 All mappings are fully customizable: add French, Spanish, emoji, Braille, or any Unicode character.
 
