@@ -112,7 +112,9 @@ cargo test --workspace
 ```bash
 # Build the Fcitx5 addon, then install it system-wide (installing builds nothing,
 # so only the copy runs as root; use `doas` instead of `sudo` if you prefer).
-# The released build is installed, see below.
+# There is no debug addon: its Rust part is built with `--release` and its C++
+# with `-O2`. Which compiler's build is installed is explained in "Native
+# Fcitx5 addon" below.
 cargo xtask fcitx5 build
 sudo ./target/debug/xtask fcitx5 install
 fcitx5 -r   # then add "Accents Rapides" as an input method in fcitx5-configtool
@@ -120,15 +122,19 @@ fcitx5 -r   # then add "Accents Rapides" as an input method in fcitx5-configtool
 # Remove it again
 sudo ./target/debug/xtask fcitx5 uninstall
 
-# Launch the mapping/profile editor
-cargo run -- editor
+# Build the release version of the editor and the overlay, then run it
+cargo build --release
+./target/release/accents-rapides editor    # the mapping/profile editor
+./target/release/accents-rapides overlay   # the cycle overlay, fed by the addon
+./target/release/accents-rapides config    # show configuration info
 
-# Try the cycle overlay (the addon tells it what to show). To keep it running
-# next to Fcitx5, see "Starting the overlay at login" below
-cargo run -- overlay
+# Or install it for your user (-> ~/.cargo/bin/accents-rapides), and remove it again
+cargo install --path .
+cargo uninstall accents-rapides
 
-# Show configuration info
-cargo run -- config
+# To keep the overlay running next to Fcitx5, see "Starting the overlay at login"
+# below. While developing, `cargo run -- editor` (or `overlay`, `config`) builds
+# and runs a debug version instead.
 ```
 
 With the Accents Rapides input method active:
