@@ -101,7 +101,7 @@ git clone https://github.com/juanmaneo/accents-rapides.git
 cd accents-rapides
 
 # Build everything
-cargo build
+cargo build --workspace
 
 # Run the test suite
 cargo test --workspace
@@ -122,19 +122,19 @@ fcitx5 -r   # then add "Accents Rapides" as an input method in fcitx5-configtool
 # Remove it again
 sudo ./target/debug/xtask fcitx5 uninstall
 
-# Build the release version of the editor and the overlay, then run it
-cargo build --release
-./target/release/accents-rapides editor    # the mapping/profile editor
-./target/release/accents-rapides overlay   # the cycle overlay, fed by the addon
+# Build the release version of the editor, the overlay and the CLI, then run them
+cargo build --release --workspace
+./target/release/accents-rapides-editor    # the mapping/profile editor
+./target/release/accents-rapides-overlay   # the cycle overlay, fed by the addon
 ./target/release/accents-rapides config    # show configuration info
 
-# Or install it for your user (-> ~/.cargo/bin/accents-rapides), and remove it again
+# Or install them for your user (-> ~/.cargo/bin/), and remove them again
+cargo install --path crates/editor
+cargo install --path crates/overlay
 cargo install --path .
-cargo uninstall accents-rapides
+cargo uninstall accents-rapides-editor accents-rapides-overlay accents-rapides
 
-# To keep the overlay running next to Fcitx5, see "Starting the overlay at login"
-# below. While developing, `cargo run -- editor` (or `overlay`, `config`) builds
-# and runs a debug version instead.
+# To keep the overlay running next to Fcitx5, see "Starting the overlay at login" below
 ```
 
 With the Accents Rapides input method active:
@@ -277,6 +277,19 @@ changed (a broken file is reported in the Fcitx5 log and the previous configurat
 stays).
 
 ## Development
+
+While developing, run debug builds straight from the source tree:
+
+```bash
+# Launch the mapping/profile editor
+cargo run -- editor
+
+# Try the cycle overlay (the addon tells it what to show)
+cargo run -- overlay
+
+# Show configuration info
+cargo run -- config
+```
 
 Developer tasks run through the `cargo xtask` pattern (see `.cargo/config.toml`):
 
