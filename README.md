@@ -119,8 +119,8 @@ sudo ./target/debug/xtask fcitx5 uninstall
 # Launch the mapping/profile editor
 cargo run -- editor
 
-# Launch the cycle overlay (keep it running next to Fcitx5, e.g. from your
-# compositor's autostart): the addon tells it what to show
+# Try the cycle overlay (the addon tells it what to show). To keep it running
+# next to Fcitx5, see "Starting the overlay at login" below
 cargo run -- overlay
 
 # Show configuration info
@@ -138,6 +138,68 @@ With the Accents Rapides input method active:
 
 Each window keeps its own gesture: a key held in one window never commits in
 another.
+
+### Starting the overlay at login
+
+The overlay is a per-user program (never root) that draws on your Wayland session, so
+it is started by your desktop at login, not by the system. Install it once, for your
+user only:
+
+```bash
+cargo install --path crates/overlay   # -> ~/.cargo/bin/accents-rapides-overlay
+```
+
+Autostart entries do not read your shell profile, so `~/.cargo/bin` is usually not on
+their `PATH`: always write the absolute path, the one `which accents-rapides-overlay`
+prints (`/home/you/.cargo/bin/accents-rapides-overlay` below). Then pick **one** of the
+following (two entries would start two overlays, and the second cannot bind the socket).
+Start order does not matter: the addon's messages are dropped until the overlay is up.
+
+**KDE Plasma, COSMIC** (and any other desktop implementing XDG autostart, on Linux and
+FreeBSD alike): create `~/.config/autostart/accents-rapides-overlay.desktop`:
+
+```ini
+[Desktop Entry]
+Type=Application
+Name=Accents Rapides overlay
+Exec=/home/you/.cargo/bin/accents-rapides-overlay
+NotShowIn=GNOME
+```
+
+On Plasma, *System Settings → Autostart → Add… → Add Application*, pointing at the
+binary, creates the same file. The overlay starts at the next login; to start it now
+without logging out, run the binary once from a terminal with `&`.
+
+**sway / Hyprland**: one line in the compositor configuration:
+
+```
+exec /home/you/.cargo/bin/accents-rapides-overlay          # sway
+exec-once = /home/you/.cargo/bin/accents-rapides-overlay   # Hyprland
+```
+
+**systemd user service** (Linux, optional: restarts the overlay if it ever crashes):
+create `~/.config/systemd/user/accents-rapides-overlay.service`:
+
+```ini
+[Unit]
+Description=Accents Rapides overlay
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+ExecStart=%h/.cargo/bin/accents-rapides-overlay
+Restart=on-failure
+
+[Install]
+WantedBy=graphical-session.target
+```
+
+then `systemctl --user enable --now accents-rapides-overlay`. Plasma and COSMIC export
+`WAYLAND_DISPLAY` to the systemd user manager themselves; on sway add
+`exec systemctl --user import-environment WAYLAND_DISPLAY` to its configuration.
+
+To remove it: delete the entry you created (for the service, `systemctl --user disable
+--now accents-rapides-overlay` first) and run `cargo uninstall accents-rapides-overlay`.
 
 ### Default Mappings
 
