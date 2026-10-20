@@ -2,6 +2,7 @@
 //! one highlighted.
 
 use accents_rapides_core::OverlayMessage;
+use accents_rapides_ui::font_for;
 use iced::widget::{container, row, text, Row};
 use iced::{border, Color, Element, Length, Theme};
 use iced_layershell::to_layer_message;
@@ -48,26 +49,37 @@ pub enum Message {
 }
 
 /// The overlay: a rounded panel with one glyph per variant, or nothing when
-/// hidden.
+/// hidden. The current variant is coloured and gets a tinted background: a
+/// colour emoji keeps its own colours, so the text colour alone would not
+/// mark it.
 pub fn view(overlay: &Overlay) -> Element<'_, Message> {
     if overlay.variants.is_empty() {
         return Row::new().into();
     }
     let cells = overlay.cells().map(|(variant, active)| {
-        let glyph = text(variant).size(32);
-        if active {
-            glyph.color(ACTIVE_COLOR).into()
+        let glyph = text(variant).size(32).font(font_for(variant));
+        let glyph = if active {
+            glyph.color(ACTIVE_COLOR)
         } else {
-            glyph.into()
-        }
+            glyph
+        };
+        container(glyph)
+            .padding([0, 5])
+            .style(move |_theme| cell_style(active))
+            .into()
     });
-    container(
-        container(row(cells).spacing(10))
-            .padding([10, 15])
-            .style(panel_style),
-    )
-    .center_x(Length::Fill)
-    .into()
+    container(container(row(cells)).padding(10).style(panel_style))
+        .center_x(Length::Fill)
+        .into()
+}
+
+/// A rounded tint behind the current variant, nothing behind the others.
+pub fn cell_style(active: bool) -> container::Style {
+    container::Style {
+        background: active.then(|| ACTIVE_COLOR.scale_alpha(0.25).into()),
+        border: border::rounded(6),
+        ..container::Style::default()
+    }
 }
 
 /// Translucent dark panel with rounded corners.

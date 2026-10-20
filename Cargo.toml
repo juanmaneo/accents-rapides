@@ -6,6 +6,7 @@ members = [
     "crates/fcitx5",
     "crates/editor",
     "crates/overlay",
+    "crates/ui",
     "crates/test-support",
     "xtask"
 ]

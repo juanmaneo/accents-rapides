@@ -59,14 +59,15 @@ constexpr PhysicalKey kA{FcitxKey_a, 38};
 constexpr PhysicalKey kShiftA{FcitxKey_A, 38};
 constexpr PhysicalKey kS{FcitxKey_s, 39};
 constexpr PhysicalKey kO{FcitxKey_o, 32};
+constexpr PhysicalKey kT{FcitxKey_t, 28};
 constexpr PhysicalKey kX{FcitxKey_x, 53};
 /// The default leader.
 constexpr PhysicalKey kAlt{FcitxKey_Alt_L, 64};
 constexpr PhysicalKey kShift{FcitxKey_Shift_L, 50};
 
 static_assert(kA.code == kShiftA.code, "Shift changes the symbol, not the key");
-static_assert(kA.code != kS.code && kS.code != kO.code && kO.code != kX.code &&
-              kX.code != kAlt.code);
+static_assert(kA.code != kS.code && kS.code != kO.code && kO.code != kT.code &&
+              kT.code != kX.code && kX.code != kAlt.code);
 
 fcitx::Key key(PhysicalKey physical, fcitx::KeyStates states = fcitx::KeyStates{}) {
     return fcitx::Key{physical.sym, states, physical.code};
@@ -245,6 +246,49 @@ void pendingKey(Server &server) {
     static_cast<void>(w.release(kO));
 }
 
+/// Make sure a rewrite of `path` is noticed: a coarse file system clock
+/// could give it the time of the creation.
+void touch(const std::filesystem::path &path) {
+    std::filesystem::last_write_time(path,
+                                     std::filesystem::last_write_time(path) + std::chrono::hours{1});
+}
+
+/// Emoji of several code points: the farmer, a ZWJ sequence (three code
+/// points, eleven bytes of UTF-8), and the French flag, a pair of regional
+/// indicators (eight bytes).
+constexpr std::string_view kFarmer = "🧑‍🌾";
+constexpr std::string_view kFrance = "🇫🇷";
+
+/// Map `t` to the farmer and the flag in the mappings file next to
+/// `config`, as the editor would.
+bool mapEmoji(const std::filesystem::path &config) {
+    const auto mappings = config.parent_path() / "mappings.toml";
+    if (!std::filesystem::exists(mappings)) {
+        return false;
+    }
+    std::ofstream{mappings, std::ios::app} << std::format(
+        "\n[profiles.Default.mappings.t]\ncharacters = [\"{}\", \"{}\"]\n", kFarmer, kFrance);
+    touch(mappings);
+    return true;
+}
+
+void emoji(Server &server, const std::filesystem::path &config) {
+    // Variants are bytes to the addon and to Fcitx5, whatever their length:
+    // a sequence of several code points shows whole as preedit (the cursor
+    // is at its end, in bytes) and commits whole.
+    Window w{server};
+    check(mapEmoji(config), "map t to emoji");
+    static_cast<void>(w.focusOut());
+    static_cast<void>(w.focusIn());
+    expect(w.press(kT), {.taken = true, .commit = "", .preedit = "t"});
+    expect(w.press(kAlt), {.taken = true, .commit = "", .preedit = std::string{kFarmer}});
+    static_cast<void>(w.release(kAlt, fcitx::KeyState::Alt));
+    expect(w.press(kAlt), {.taken = true, .commit = "", .preedit = std::string{kFrance}});
+    static_cast<void>(w.release(kAlt, fcitx::KeyState::Alt));
+    expect(w.release(kT, fcitx::KeyState::Alt),
+           {.taken = true, .commit = std::string{kFrance}, .preedit = ""});
+}
+
 /// Blacklist `program` in the configuration file, as the editor would.
 bool blacklist(const std::filesystem::path &config, std::string_view program) {
     std::string text;
@@ -259,10 +303,7 @@ bool blacklist(const std::filesystem::path &config, std::string_view program) {
     }
     text.replace(at, none.size(), std::format("filtered_apps = [\"{}\"]", program));
     std::ofstream{config} << text;
-    // A coarse file system clock could give the rewrite the time of the
-    // creation, and the change would go unnoticed.
-    std::filesystem::last_write_time(
-        config, std::filesystem::last_write_time(config) + std::chrono::hours{1});
+    touch(config);
     return true;
 }
 
@@ -304,6 +345,7 @@ void run(fcitx::Instance &instance, const std::filesystem::path &config) {
     gestures(server);
     windows(server);
     pendingKey(server);
+    emoji(server, config);
     reloadOnFocus(server, config);
 }
 

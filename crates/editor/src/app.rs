@@ -8,6 +8,7 @@ use accents_rapides_core::{
     join_outputs, mappings_path, split_outputs, AppFilterMode, Config, CoreError, KeyMapping,
     LeaderKey, MappingKey, MappingManager, MappingProfile,
 };
+use accents_rapides_ui::font_for;
 use iced::widget::{button, checkbox, column, row, scrollable, text, text_input, Column};
 use iced::{Element, Length};
 use std::ops::RangeInclusive;
@@ -410,6 +411,7 @@ impl Editor {
                 row![
                     text(key.to_string()).width(Length::Fixed(100.0)),
                     text_input("Variants, comma-separated", output)
+                        .font(font_for(output))
                         .on_input(move |output| Message::Output(i, output)),
                     checkbox(mapping.reverse_cycle)
                         .label("Reverse")
@@ -427,6 +429,7 @@ impl Editor {
                 .on_input(Message::NewKey),
             text_input("Variants, comma-separated", &self.new_output)
                 .id(input_id::OUTPUT)
+                .font(font_for(&self.new_output))
                 .on_input(Message::NewOutput),
             button("Add mapping")
                 .on_press_maybe(self.new_mapping_key().map(|_| Message::AddMapping)),

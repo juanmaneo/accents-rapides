@@ -7,7 +7,7 @@ use accents_rapides_core::{
 };
 use accents_rapides_editor::app::{input_id, Editor, Message, Tab, NO_PROFILE, SAVED};
 use accents_rapides_editor::load_editor;
-use accents_rapides_test_support::TempConfig;
+use accents_rapides_test_support::{colored_pixels, TempConfig};
 use anyhow::Result;
 use iced_test::{selector, simulator};
 use std::fs;
@@ -319,6 +319,31 @@ fn test_edit_mappings() {
     editor.update(Message::AddMapping);
     editor.update(Message::RemoveMapping(0));
     assert_eq!(editor.status, "");
+}
+
+/// How many coloured pixels the mappings tab shows with the one mapping of
+/// the `Second` profile set to `output`.
+fn colored_pixels_with_output(output: &str) -> usize {
+    let mut editor = two_profile_editor();
+    editor.update(Message::UseProfile("Second".to_string()));
+    editor.update(Message::SelectTab(Tab::Mappings));
+    editor.update(Message::Output(0, output.to_string()));
+    let snapshot = simulator(editor.view())
+        .snapshot(&iced::Theme::Dark)
+        .expect("render the editor");
+    colored_pixels(&snapshot)
+}
+
+/// Emoji in a mapping must show in colour, with the colour emoji font:
+/// iced's own font fallback renders most of them as the grey glyphs of a
+/// text font. The buttons are coloured whatever the output, so compare with
+/// a letter. Needs a colour emoji font installed (Noto Color Emoji, say).
+#[test]
+fn test_emoji_show_in_color() {
+    assert!(
+        colored_pixels_with_output("😀") > colored_pixels_with_output("a"),
+        "the grinning face is yellow in every colour emoji font"
+    );
 }
 
 #[test]

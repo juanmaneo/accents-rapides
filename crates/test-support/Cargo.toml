@@ -12,6 +12,13 @@ rust-version.workspace = true
 [lints]
 workspace = true
 
+[features]
+# Pixel checks on iced_test snapshots, for the editor and overlay tests only:
+# the other crates' tests must not build iced.
+snapshot = ["dep:iced_test", "dep:png"]
+
 [dependencies]
 accents-rapides-core = { path = "../core" }
+iced_test = { version = "0.14", optional = true }
+png = { version = "0.18", optional = true }
 tempfile = "3.10"

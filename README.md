@@ -49,7 +49,8 @@ accents-rapides/
 │   │   └── data/           # Fcitx5 addon and input method registration files
 │   ├── editor/             # iced app for managing mappings and settings
 │   ├── overlay/            # iced layer-shell surface showing the accent cycle
-│   └── test-support/       # Shared test helpers (temporary config and overlay socket), not published
+│   ├── ui/                 # What the editor and the overlay share: the font to show a text with
+│   └── test-support/       # Shared test helpers (temporary config, overlay socket, snapshot pixels), not published
 ├── xtask/                  # `cargo xtask` developer tasks (coverage, audit, MSRV, C++ addon build)
 ├── coverage-ratchet.json   # Coverage gate enforced by `cargo xtask coverage`
 ├── deny.toml               # cargo-deny policy used by `cargo xtask audit`
@@ -71,6 +72,9 @@ accents-rapides/
   As in the original, GNOME/Mutter and X11 cannot host it; everything else works there.
   The overlay renders on the GPU (wgpu) so that its background can be transparent, and falls
   back to the CPU renderer when no GPU is available.
+- To see emoji in colour in the editor and the overlay: a colour emoji font (Noto Color Emoji,
+  Twitter Color Emoji, JoyPixels, ...). The tests need one too. On Debian/Ubuntu:
+  `sudo apt install fonts-noto-color-emoji`; on FreeBSD: `pkg install noto-emoji`.
 
 For the native Fcitx5 addon, additionally:
 

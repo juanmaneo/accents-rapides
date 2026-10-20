@@ -13,6 +13,11 @@ use std::sync::{Mutex, PoisonError};
 pub use accents_rapides_core::{CONFIG_PATH_ENV, OVERLAY_SOCKET_ENV};
 use tempfile::TempDir;
 
+#[cfg(feature = "snapshot")]
+mod snapshot;
+#[cfg(feature = "snapshot")]
+pub use snapshot::colored_pixels;
+
 /// `std::env::set_var` is process-global: every in-process change to the
 /// environment serializes on this lock (one per test binary).
 static ENV_LOCK: Mutex<()> = Mutex::new(());

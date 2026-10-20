@@ -13,6 +13,7 @@ workspace = true
 
 [dependencies]
 accents-rapides-core = { path = "../core" }
+accents-rapides-ui = { path = "../ui" }
 anyhow = "1.0"
 # The GPU renderer is needed for transparency: the CPU one presents through
 # softbuffer, whose Wayland buffers have no alpha channel (Xrgb8888). iced
@@ -28,7 +29,8 @@ winit-core = "=0.31.0-beta.2"
 tracing-subscriber = "0.3"
 
 [dev-dependencies]
-accents-rapides-test-support = { path = "../test-support" }
+accents-rapides-test-support = { path = "../test-support", features = ["snapshot"] }
 anyhow = "1.0"
 assert_cmd = "2.0"
+iced_test = "0.14"
 predicates = "2.0"

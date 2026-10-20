@@ -13,12 +13,13 @@ workspace = true
 
 [dependencies]
 accents-rapides-core = { path = "../core" }
+accents-rapides-ui = { path = "../ui" }
 anyhow = "1.0"
 iced.workspace = true
 tracing-subscriber = "0.3"
 
 [dev-dependencies]
-accents-rapides-test-support = { path = "../test-support" }
+accents-rapides-test-support = { path = "../test-support", features = ["snapshot"] }
 anyhow = "1.0"
 assert_cmd = "2.0"
 iced_test = "0.14"

@@ -2,9 +2,10 @@
 //! overlay socket, and the binary entry point.
 
 use accents_rapides_core::OverlayMessage;
-use accents_rapides_overlay::app::{panel_style, view, Overlay};
+use accents_rapides_overlay::app::{cell_style, panel_style, view, Overlay, ACTIVE_COLOR};
 use accents_rapides_overlay::run_overlay;
-use accents_rapides_test_support::{with_env, TempConfig, OVERLAY_SOCKET_ENV};
+use accents_rapides_test_support::{colored_pixels, with_env, TempConfig, OVERLAY_SOCKET_ENV};
+use iced_test::simulator;
 
 fn show(variants: &[&str], index: usize) -> OverlayMessage {
     OverlayMessage::Show {
@@ -56,6 +57,34 @@ fn test_overlay_hides() {
     assert!(cells(&overlay).is_empty());
 }
 
+/// How many coloured pixels the overlay shows for `variant` alone, with no
+/// current one (that one is coloured by design).
+fn colored_pixels_for(variant: &str) -> usize {
+    let overlay = Overlay {
+        variants: vec![variant.to_string()],
+        current: None,
+    };
+    // The CPU renderer, as in the editor tests: no GPU needed.
+    with_env(&[("ICED_TEST_BACKEND", Some("tiny-skia"))], || {
+        let snapshot = simulator(view(&overlay))
+            .snapshot(&iced::Theme::Dark)
+            .expect("render the overlay");
+        colored_pixels(&snapshot)
+    })
+}
+
+/// Emoji must show in colour, with the colour emoji font: iced's own font
+/// fallback renders most of them as the grey glyphs of a text font.
+/// Needs a colour emoji font installed (Noto Color Emoji, say).
+#[test]
+fn test_emoji_show_in_color() {
+    assert_eq!(colored_pixels_for("a"), 0, "a letter is white on grey");
+    assert!(
+        colored_pixels_for("😀") > 0,
+        "the grinning face is yellow in every colour emoji font"
+    );
+}
+
 #[test]
 fn test_panel_style_is_translucent_dark() {
     let style = panel_style(&iced::Theme::Dark);
@@ -65,6 +94,15 @@ fn test_panel_style_is_translucent_dark() {
         style.background,
         Some(iced::Color::from_rgba(0.0, 0.0, 0.0, 0.7).into())
     );
+}
+
+#[test]
+fn test_only_the_current_cell_is_tinted() {
+    assert_eq!(
+        cell_style(true).background,
+        Some(ACTIVE_COLOR.scale_alpha(0.25).into())
+    );
+    assert_eq!(cell_style(false).background, None);
 }
 
 #[test]

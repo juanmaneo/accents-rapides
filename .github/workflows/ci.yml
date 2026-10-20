@@ -26,8 +26,9 @@ jobs:
       - uses: actions/checkout@v4
       # The only system library needed at build time (pkg-config, for the
       # overlay's layer-shell stack); Wayland, X11 and Vulkan are dlopen'ed.
-      - name: Install libxkbcommon
-        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev
+      # The editor and overlay tests render emoji with a colour emoji font.
+      - name: Install libxkbcommon and a colour emoji font
+        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev fonts-noto-color-emoji
       # Installs the toolchain and components pinned in rust-toolchain.toml.
       - run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2

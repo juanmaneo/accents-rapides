@@ -1,0 +1,17 @@
+[package]
+name = "accents-rapides-ui"
+description = "What the accents-rapides editor and overlay share: the font to show a text with"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# `advanced` exposes the font system, to find the installed emoji font.
+iced = { workspace = true, features = ["advanced"] }
+# The Emoji_Presentation property, as Emacs's emoji script.
+unicode-properties = { version = "0.1", default-features = false, features = ["emoji"] }
