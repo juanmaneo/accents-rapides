@@ -226,6 +226,27 @@ To remove it: delete the entry you created (for the service, `systemctl --user d
 
 All mappings are fully customizable: add French, Spanish, emoji, Braille, or any Unicode character.
 
+### Troubleshooting
+
+**The right Alt does not lead** (the left one does): the keyboard layout probably puts
+the Compose key on Right Alt (XKB option `compose:ralt`). That key then sends
+`Multi_key` instead of `Alt_R`, so it is no longer an Alt key: it types the held letter
+unaccented and starts a compose sequence instead. Check with:
+
+```bash
+setxkbmap -query   # "options: compose:ralt" means Right Alt is the Compose key
+```
+
+On KDE Plasma, uncheck *System Settings → Keyboard → Key Bindings → Position of Compose
+key → Right Alt*, or clear the options from a terminal, then log out and in:
+
+```bash
+kwriteconfig6 --file kxkbrc --group Layout --key Options ""
+```
+
+To keep a Compose key, put it on another key (Menu, Right Ctrl...) rather than on Right
+Alt.
+
 ## Configuration
 
 Three files live in `~/.config/accents-rapides/` (`accents-rapides config` prints their
