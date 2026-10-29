@@ -4,13 +4,17 @@
 //! and the status line reports the result; the Fcitx5 addon picks the files
 //! up when a window next gains focus.
 
+use crate::theme;
 use accents_rapides_core::{
     join_outputs, mappings_path, split_outputs, AppFilterMode, Config, CoreError, KeyMapping,
     LeaderKey, MappingKey, MappingManager, MappingProfile,
 };
 use accents_rapides_ui::font_for;
-use iced::widget::{button, checkbox, column, row, scrollable, text, text_input, Column};
-use iced::{Element, Length};
+use iced::font::{Family, Font};
+use iced::widget::{
+    button, checkbox, column, container, row, rule, scrollable, text, text_input, Column,
+};
+use iced::{Alignment, Element, Length};
 use std::ops::RangeInclusive;
 
 /// Shown where a tab needs a current profile and there is none.
@@ -341,9 +345,12 @@ impl Editor {
     }
 
     pub fn view(&self) -> Element<'_, Message> {
-        let tabs =
+        let tabs = container(
             row(Tab::ALL.map(|tab| choice(tab.label(), tab == self.tab, Message::SelectTab(tab))))
-                .spacing(8);
+                .spacing(4),
+        )
+        .style(theme::well)
+        .padding(4);
 
         let content = match self.tab {
             Tab::Profiles => self.profiles(),
@@ -351,14 +358,39 @@ impl Editor {
             Tab::Settings => self.settings(),
         };
 
-        column![
+        let header = column![
             text("Accents Rapides Editor").size(28),
-            tabs,
-            scrollable(content).height(Length::Fill),
-            text(&self.status),
+            text("Quick access to special characters and accents")
+                .size(14)
+                .color(theme::TEXT_MUTED),
         ]
-        .spacing(16)
-        .padding(20)
+        .spacing(4);
+
+        let status_style: fn(&iced::Theme) -> container::Style = if self.status.is_empty() {
+            theme::status_idle
+        } else if self.status == SAVED {
+            theme::status_saved
+        } else {
+            theme::status_error
+        };
+        let status = container(text(&self.status).size(14))
+            .padding([4, 12])
+            .style(status_style);
+
+        container(
+            column![
+                header,
+                tabs,
+                scrollable(content).height(Length::Fill),
+                status
+            ]
+            .spacing(16)
+            .padding(24)
+            .width(Length::Fill),
+        )
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .style(theme::page)
         .into()
     }
 
@@ -372,31 +404,43 @@ impl Editor {
             } else {
                 name.clone()
             };
-            row![
-                text(label).width(Length::Fill),
-                button("Use")
-                    .on_press_maybe((!is_current).then(|| Message::UseProfile(name.clone()))),
-                button("Delete")
-                    .on_press_maybe((!is_current).then(|| Message::DeleteProfile(name.clone()))),
-            ]
-            .spacing(8)
+            container(
+                row![
+                    text(label).width(Length::Fill),
+                    button("Use")
+                        .style(theme::primary_button)
+                        .on_press_maybe((!is_current).then(|| Message::UseProfile(name.clone()))),
+                    button("Delete").style(theme::danger_button).on_press_maybe(
+                        (!is_current).then(|| Message::DeleteProfile(name.clone()))
+                    ),
+                ]
+                .spacing(8)
+                .align_y(Alignment::Center),
+            )
+            .style(theme::card)
+            .padding([8, 12])
+            .width(Length::Fill)
             .into()
         });
         let add = row![
             text_input("New profile name", &self.new_profile)
                 .id(input_id::PROFILE)
+                .style(theme::input)
                 .on_input(Message::NewProfileName),
             button("Add profile")
+                .style(theme::primary_button)
                 .on_press_maybe(self.new_profile_name().map(|_| Message::AddProfile)),
         ]
-        .spacing(8);
+        .spacing(8)
+        .align_y(Alignment::Center);
 
         column![
-            text("Profiles").size(20),
-            Column::with_children(rows).spacing(4),
+            section_title("Profiles".to_string()),
+            Column::with_children(rows).spacing(6),
+            rule::horizontal(1).style(theme::rule_style),
             add,
         ]
-        .spacing(8)
+        .spacing(10)
         .into()
     }
 
@@ -408,40 +452,57 @@ impl Editor {
         };
         let rows = profile.mappings.iter().zip(&self.outputs).enumerate().map(
             |(i, ((key, mapping), output))| {
-                row![
-                    text(key.to_string()).width(Length::Fixed(100.0)),
-                    text_input("Variants, comma-separated", output)
-                        .font(font_for(output))
-                        .on_input(move |output| Message::Output(i, output)),
-                    checkbox(mapping.reverse_cycle)
-                        .label("Reverse")
-                        .on_toggle(move |reverse| Message::Reverse(i, reverse)),
-                    button("Remove").on_press(Message::RemoveMapping(i)),
-                ]
-                .spacing(8)
+                container(
+                    row![
+                        chip(key.to_string()),
+                        text_input("Variants, comma-separated", output)
+                            .style(theme::input)
+                            .font(font_for(output))
+                            .width(Length::Fill)
+                            .on_input(move |output| Message::Output(i, output)),
+                        checkbox(mapping.reverse_cycle)
+                            .label("Reverse")
+                            .style(theme::checkbox_style)
+                            .on_toggle(move |reverse| Message::Reverse(i, reverse)),
+                        button("Remove")
+                            .style(theme::danger_button)
+                            .on_press(Message::RemoveMapping(i)),
+                    ]
+                    .spacing(8)
+                    .align_y(Alignment::Center),
+                )
+                .style(theme::card)
+                .padding([8, 12])
+                .width(Length::Fill)
                 .into()
             },
         );
         let add = row![
             text_input("Key (a, Shift+A, Space)", &self.new_key)
                 .id(input_id::KEY)
-                .width(Length::Fixed(100.0))
+                .style(theme::input)
+                .width(Length::Fixed(140.0))
                 .on_input(Message::NewKey),
             text_input("Variants, comma-separated", &self.new_output)
                 .id(input_id::OUTPUT)
+                .style(theme::input)
                 .font(font_for(&self.new_output))
+                .width(Length::Fill)
                 .on_input(Message::NewOutput),
             button("Add mapping")
+                .style(theme::primary_button)
                 .on_press_maybe(self.new_mapping_key().map(|_| Message::AddMapping)),
         ]
-        .spacing(8);
+        .spacing(8)
+        .align_y(Alignment::Center);
 
         column![
-            text(format!("Mappings of {}", profile.name)).size(20),
-            Column::with_children(rows).spacing(4),
+            section_title(format!("Mappings of {}", profile.name)),
+            Column::with_children(rows).spacing(6),
+            rule::horizontal(1).style(theme::rule_style),
             add,
         ]
-        .spacing(8)
+        .spacing(10)
         .into()
     }
 
@@ -467,18 +528,22 @@ impl Editor {
         .push(
             text_input("Custom key name", custom.unwrap_or_default())
                 .id(input_id::CUSTOM_LEADER)
+                .style(theme::input)
                 .on_input_maybe(custom.map(|_| |key| Message::Leader(LeaderKey::Custom(key)))),
         )
-        .spacing(8);
+        .spacing(4);
 
         let window = row![
-            text(format!("Time window: {} ms", config.time_window_ms)),
+            text(format!("Time window: {} ms", config.time_window_ms)).width(Length::Fill),
             button("−")
+                .style(theme::secondary_button)
                 .on_press_maybe(step_window(config.time_window_ms, false).map(Message::TimeWindow)),
             button("+")
+                .style(theme::secondary_button)
                 .on_press_maybe(step_window(config.time_window_ms, true).map(Message::TimeWindow)),
         ]
-        .spacing(8);
+        .spacing(8)
+        .align_y(Alignment::Center);
 
         let filter = row![
             choice(
@@ -492,49 +557,85 @@ impl Editor {
                 Message::FilterMode(AppFilterMode::Whitelist),
             ),
         ]
-        .spacing(8);
+        .spacing(4);
         let apps = config.filtered_apps.iter().enumerate().map(|(i, app)| {
-            row![
-                text(app).width(Length::Fill),
-                button("Remove").on_press(Message::RemoveApp(i)),
-            ]
-            .spacing(8)
+            container(
+                row![
+                    text(app).width(Length::Fill),
+                    button("Remove")
+                        .style(theme::danger_button)
+                        .on_press(Message::RemoveApp(i)),
+                ]
+                .spacing(8)
+                .align_y(Alignment::Center),
+            )
+            .style(theme::card)
+            .padding([8, 12])
+            .width(Length::Fill)
             .into()
         });
         let add_app = row![
             text_input("Application (e.g. keepassxc)", &self.new_app)
                 .id(input_id::APP)
+                .style(theme::input)
                 .on_input(Message::NewApp),
-            button("Add application").on_press_maybe(self.new_app_name().map(|_| Message::AddApp)),
+            button("Add application")
+                .style(theme::primary_button)
+                .on_press_maybe(self.new_app_name().map(|_| Message::AddApp)),
         ]
-        .spacing(8);
+        .spacing(8)
+        .align_y(Alignment::Center);
 
         column![
-            text("Leader key").size(20),
-            leaders,
+            section_title("Leader key".to_string()),
+            container(leaders).style(theme::well).padding(4),
+            section_title("Time window".to_string()),
             window,
             checkbox(config.show_overlay)
                 .label("Show the cycle overlay")
+                .style(theme::checkbox_style)
                 .on_toggle(Message::ShowOverlay),
             checkbox(config.sort_by_usage)
                 .label("Sort variants by usage")
+                .style(theme::checkbox_style)
                 .on_toggle(Message::SortByUsage),
-            text("Application filter").size(20),
-            filter,
-            Column::with_children(apps).spacing(4),
+            section_title("Application filter".to_string()),
+            container(filter).style(theme::well).padding(4),
+            Column::with_children(apps).spacing(6),
+            rule::horizontal(1).style(theme::rule_style),
             add_app,
         ]
-        .spacing(8)
+        .spacing(10)
         .into()
     }
 }
 
+/// A section heading: a small, muted label above a card or a group.
+fn section_title(title: String) -> Element<'static, Message> {
+    text(title).size(13).color(theme::TEXT_MUTED).into()
+}
+
+/// A key chip: the mapping's key as an accent-soft pill, monospace.
+fn chip(key: String) -> Element<'static, Message> {
+    container(
+        text(key)
+            .font(Font {
+                family: Family::Monospace,
+                ..Font::DEFAULT
+            })
+            .size(14),
+    )
+    .style(theme::key_chip)
+    .padding([4, 10])
+    .into()
+}
+
 /// A button that looks selected when `selected`: tabs and options.
 fn choice<'a>(label: &'a str, selected: bool, message: Message) -> Element<'a, Message> {
-    let style = if selected {
-        button::primary
+    let style: fn(&iced::Theme, button::Status) -> button::Style = if selected {
+        theme::selected_button
     } else {
-        button::secondary
+        theme::secondary_button
     };
     button(label).on_press(message).style(style).into()
 }
