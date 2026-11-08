@@ -1,6 +1,7 @@
 # Accents Rapides
 
 [![CI](https://github.com/juanmaneo/accents-rapides/actions/workflows/ci.yml/badge.svg)](https://github.com/juanmaneo/accents-rapides/actions/workflows/ci.yml)
+[![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
 
 Accents Rapides is a Rust port of [schnelle-umlaute](https://github.com/Maik-0000FF/schnelle-umlaute), a keyboard utility that provides quick access to special characters and accents (a Linux alternative to Windows PowerToys Quick Accent).
 
