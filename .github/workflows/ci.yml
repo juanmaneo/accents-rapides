@@ -5,7 +5,7 @@ on:
   pull_request:
   # New RustSec advisories appear without any change on our side.
   schedule:
-    - cron: "0 6 * * 1"
+    - cron: "0 6 * * *"
   workflow_dispatch:
 
 permissions:
