@@ -4,6 +4,7 @@ use directories::ProjectDirs;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use crate::input::key_name;
@@ -43,21 +44,31 @@ pub(crate) fn read_toml<T: DeserializeOwned>(path: &Path) -> Result<T, CoreError
 
 /// Write `value` as TOML to `path`, creating the parent directory if it
 /// does not exist.
+///
+/// The content is written to a temporary file in the same directory and then
+/// renamed over `path`, so a crash mid-save never leaves a truncated file.
 pub(crate) fn write_toml<T: Serialize>(path: &Path, value: &T) -> Result<(), CoreError> {
     // Every field we persist is a TOML-representable type, so this cannot fail.
     let content = toml::to_string_pretty(value).expect("always serializes to TOML");
 
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|source| CoreError::CreateConfigDir {
-            path: parent.to_path_buf(),
-            source,
-        })?;
-    }
+    let dir = match path.parent() {
+        Some(parent) if !parent.as_os_str().is_empty() => parent,
+        _ => Path::new("."),
+    };
+    fs::create_dir_all(dir).map_err(|source| CoreError::CreateConfigDir {
+        path: dir.to_path_buf(),
+        source,
+    })?;
 
-    fs::write(path, content).map_err(|source| CoreError::WriteConfig {
+    let write_error = |source| CoreError::WriteConfig {
         path: path.to_path_buf(),
         source,
-    })
+    };
+    let mut temp = tempfile::NamedTempFile::new_in(dir).map_err(write_error)?;
+    temp.write_all(content.as_bytes()).map_err(write_error)?;
+    temp.as_file().sync_all().map_err(write_error)?;
+    temp.persist(path).map_err(|err| write_error(err.error))?;
+    Ok(())
 }
 
 /// Error type for the accents-rapides core library

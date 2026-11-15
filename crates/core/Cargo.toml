@@ -20,8 +20,8 @@ thiserror = "1.0"
 tracing = "0.1"
 unicode-segmentation = "1.11"
 indexmap = { version = "2.2", features = ["serde"] }
+tempfile = "3.10"
 
 [dev-dependencies]
 accents-rapides-test-support = { path = "../test-support" }
 anyhow = "1.0"
-tempfile = "3.10"
