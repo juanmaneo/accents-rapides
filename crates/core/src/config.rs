@@ -60,14 +60,17 @@ pub(crate) fn write_toml<T: Serialize>(path: &Path, value: &T) -> Result<(), Cor
         source,
     })?;
 
-    let write_error = |source| CoreError::WriteConfig {
-        path: path.to_path_buf(),
-        source,
-    };
-    let mut temp = tempfile::NamedTempFile::new_in(dir).map_err(write_error)?;
-    temp.write_all(content.as_bytes()).map_err(write_error)?;
-    temp.as_file().sync_all().map_err(write_error)?;
-    temp.persist(path).map_err(|err| write_error(err.error))?;
+    tempfile::NamedTempFile::new_in(dir)
+        .and_then(|mut temp| {
+            temp.write_all(content.as_bytes())
+                .and_then(|()| temp.as_file().sync_all())
+                .map(|()| temp)
+        })
+        .and_then(|temp| temp.persist(path).map_err(|err| err.error))
+        .map_err(|source| CoreError::WriteConfig {
+            path: path.to_path_buf(),
+            source,
+        })?;
     Ok(())
 }
 
