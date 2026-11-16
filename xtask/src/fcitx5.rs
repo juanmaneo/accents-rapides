@@ -120,12 +120,35 @@ pub fn run(command: Fcitx5Command) -> Result<()> {
             platform::current()?,
         ),
         Fcitx5Command::Install { destdir, compiler } => {
-            let platform = platform::current()?;
-            let compiler = compiler.unwrap_or_else(|| platform.released_compiler().to_owned());
+            let toolchain = RootManifest::load()?.workspace.metadata.cpp;
+            let compiler = installable_compiler(&toolchain, platform::current()?, compiler)?;
             install(&destdir, &compiler)
         }
         Fcitx5Command::Uninstall { destdir } => uninstall(&destdir, platform::current()?),
     }
+}
+
+/// The compiler whose build `install` copies: `requested`, or the preferred
+/// one of the system. It must be one the toolchain builds with: the name is
+/// part of the path the addon is read from, so anything else (`../../x`) would
+/// read outside the build directory.
+fn installable_compiler(
+    toolchain: &CppToolchain,
+    platform: &dyn Platform,
+    requested: Option<String>,
+) -> Result<String> {
+    let compiler = requested.unwrap_or_else(|| platform.released_compiler().to_owned());
+    ensure!(
+        toolchain.compilers.contains_key(&compiler),
+        "unknown compiler {compiler:?}: expected one of {}",
+        toolchain
+            .compilers
+            .keys()
+            .map(String::as_str)
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
+    Ok(compiler)
 }
 
 fn cpp_dir() -> PathBuf {
@@ -264,14 +287,43 @@ fn check_toolchain(
     Ok(compilers)
 }
 
+/// Split the `--cflags` or `--libs` output of pkg-config into arguments.
+///
+/// Arguments are separated by whitespace, except where a backslash or quotes
+/// protect it: pkg-config escapes the spaces in a path (`-I/opt/my\ dir`).
+fn split_flags(output: &str) -> Vec<String> {
+    let mut flags = Vec::new();
+    let mut flag = String::new();
+    let mut quote = None;
+    let mut chars = output.chars();
+    while let Some(c) = chars.next() {
+        match (quote, c) {
+            (Some(q), c) if c == q => quote = None,
+            (Some('\''), c) => flag.push(c),
+            (_, '\\') => flag.extend(chars.next()),
+            (None, '\'' | '"') => quote = Some(c),
+            (None, c) if c.is_whitespace() => {
+                if !flag.is_empty() {
+                    flags.push(std::mem::take(&mut flag));
+                }
+            }
+            (_, c) => flag.push(c),
+        }
+    }
+    if !flag.is_empty() {
+        flags.push(flag);
+    }
+    flags
+}
+
 /// `-I<dir>` -> `-isystem <dir>`: warnings in Fcitx5 headers are not ours
 /// to fix, and `-Werror` would turn them into errors.
 fn system_includes(cflags: &str) -> Vec<String> {
-    cflags
-        .split_whitespace()
+    split_flags(cflags)
+        .into_iter()
         .flat_map(|flag| match flag.strip_prefix("-I") {
             Some(dir) => vec!["-isystem".to_owned(), dir.to_owned()],
-            None => vec![flag.to_owned()],
+            None => vec![flag],
         })
         .collect()
 }
@@ -327,7 +379,7 @@ fn build_with(
             path_arg(&cpp_dir().join("addon.cpp"))?,
             path_arg(&staticlib())?,
         ]);
-        args.extend(libs.split_whitespace().map(str::to_owned));
+        args.extend(split_flags(&libs));
         args.extend(platform.rust_native_libs().iter().map(|&f| f.to_owned()));
         compile(&compiler.executable, &args)?;
     }
@@ -386,7 +438,7 @@ fn fcitx_test(
         path_arg(&test.exe)?,
         path_arg(&cpp_dir().join("fcitx_test.cpp"))?,
     ]);
-    args.extend(libs.split_whitespace().map(str::to_owned));
+    args.extend(split_flags(libs));
     compile(&compiler.executable, &args)?;
 
     // Installed under the test directory, where Fcitx5 is told to look.
@@ -564,6 +616,62 @@ mod tests {
                 "/usr/include/Fcitx5/Utils"
             ]
         );
+    }
+
+    #[test]
+    fn flags_split_on_unprotected_whitespace_only() {
+        assert_eq!(
+            split_flags("-I/usr/include/Fcitx5/Core  -lFcitx5Core\n-lFcitx5Utils"),
+            [
+                "-I/usr/include/Fcitx5/Core",
+                "-lFcitx5Core",
+                "-lFcitx5Utils"
+            ]
+        );
+        assert_eq!(
+            split_flags(r"-I/opt/my\ dir/include -L/opt/my\ dir/lib"),
+            ["-I/opt/my dir/include", "-L/opt/my dir/lib"]
+        );
+        assert_eq!(
+            split_flags(r#""-I/opt/my dir" '-L/opt/other dir' -lx"#),
+            ["-I/opt/my dir", "-L/opt/other dir", "-lx"]
+        );
+        assert_eq!(split_flags(r"'a\b'"), [r"a\b"]);
+        assert_eq!(split_flags("-lx\\"), ["-lx"]);
+        assert!(split_flags("  \n").is_empty());
+    }
+
+    #[test]
+    fn include_paths_with_spaces_stay_whole() {
+        assert_eq!(
+            system_includes(r"-I/opt/my\ dir/Fcitx5/Core -DFOO"),
+            ["-isystem", "/opt/my dir/Fcitx5/Core", "-DFOO"]
+        );
+    }
+
+    #[test]
+    fn install_only_takes_a_configured_compiler() {
+        let toolchain = RootManifest::load().unwrap().workspace.metadata.cpp;
+        let platform = &platform::Linux as &dyn Platform;
+
+        // Default: the preferred compiler of the system.
+        assert_eq!(
+            installable_compiler(&toolchain, platform, None).unwrap(),
+            platform.released_compiler()
+        );
+        assert_eq!(
+            installable_compiler(&toolchain, platform, Some("clang++".to_owned())).unwrap(),
+            "clang++"
+        );
+
+        // Anything else could name a path outside target/fcitx5.
+        for name in ["../../x", "/etc", "g++/..", "", "tcc", "G++"] {
+            let error =
+                installable_compiler(&toolchain, platform, Some(name.to_owned())).unwrap_err();
+            let message = error.to_string();
+            assert!(message.contains("unknown compiler"), "{message}");
+            assert!(message.contains("clang++, g++"), "{message}");
+        }
     }
 
     #[test]
