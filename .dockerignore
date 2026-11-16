@@ -1,0 +1,4 @@
+# Read by Docker, Podman and Buildah. The image only needs the toolchain pin:
+# the source is mounted when the container runs, and target/ alone is several GB.
+*
+!rust-toolchain.toml

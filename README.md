@@ -56,6 +56,7 @@ accents-rapides/
 ├── coverage-ratchet.json   # Coverage gate enforced by `cargo xtask coverage`
 ├── deny.toml               # cargo-deny policy used by `cargo xtask audit`
 ├── rust-toolchain.toml     # Pinned Rust version used locally and in CI
+├── Dockerfile              # Development container (Docker, Podman, Buildah), see "Development container"
 ├── .github/workflows/ci.yml
 ├── AUTHORS
 └── LICENSE                 # GNU GPL version 3
@@ -337,6 +338,57 @@ cargo xtask fcitx5 uninstall  # [--destdir DIR]
 
 The tools each task needs (`cargo-llvm-cov`, `cargo-audit`, `cargo-deny`) are
 installed automatically with `cargo install --locked` when missing.
+
+### Development container
+
+The `Dockerfile` is a complete development environment, so that any host with
+Docker, Podman or Buildah can build and test the project, whatever its
+operating system or distribution: the pinned Rust toolchain, g++ and clang++
+new enough for the addon, Fcitx5 and its development files, `libxkbcommon`,
+fonts for the tests, and `cargo-llvm-cov`, `cargo-audit` and `cargo-deny`. It is
+Arch Linux, like the `fcitx5` job of CI, because that is where the compilers
+and Fcitx5 versions we require are current.
+
+Build the image once (add `--pull` later to update it):
+
+```bash
+docker build -t accents-rapides-dev .    # or: podman build ... / buildah build ...
+```
+
+Then run any task in it. The source tree is mounted, so edits on the host are
+seen at once; the build output and the cargo caches go to named volumes, so
+they survive between runs and your `target/` is left alone:
+
+```bash
+docker run --rm -it \
+    --user "$(id -u):$(id -g)" \
+    -v "$PWD:/workspace" \
+    -v accents-rapides-cargo:/cargo \
+    -v accents-rapides-target:/target \
+    accents-rapides-dev cargo xtask fcitx5 test
+```
+
+Replace the last line with any command: `cargo test --workspace`,
+`cargo clippy --workspace --all-targets -- -D warnings`, `cargo xtask coverage`,
+`cargo xtask audit`, `cargo xtask msrv`, or `bash` for a shell.
+
+- **Podman**: run it rootless without `--user`: root in the container is you,
+  so the files it creates in the source tree are yours.
+- **SELinux hosts** (Fedora, RHEL...): mount the source as `"$PWD:/workspace:z"`.
+- **Docker Desktop, Podman machine** (macOS, Windows): the container runs in a
+  Linux VM, so leave out `--user`. Write the command on one line (the `\`
+  continuations are for POSIX shells), with `${PWD}` (PowerShell) or `%cd%` (cmd)
+  for the current directory.
+- **ARM hosts**: the Arch Linux image is x86_64 only. Add
+  `--platform linux/amd64` to `build` and `run`; it is emulated, so slow.
+- The build output is in the `/target` volume (`CARGO_TARGET_DIR`), not in
+  `./target`. To build in the source tree instead, add `-e CARGO_TARGET_DIR=target`.
+- The image contains no source code, only what the build needs, so it only has
+  to be rebuilt when `rust-toolchain.toml` changes, or to update its packages.
+  With an outdated image, rustup still installs the newly pinned toolchain,
+  but again on every run, which is slow.
+- The container has no display: the editor and the overlay, which need a Wayland
+  compositor, are run on the host. Their tests render off-screen and run fine.
 
 ### Coverage
 
