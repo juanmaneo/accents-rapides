@@ -424,8 +424,10 @@ fn test_settings_app_list() {
     assert_eq!(editor.config.filtered_apps, ["KeePassXC"]);
     assert!(shows(&editor, "KeePassXC"));
 
-    // Already listed: the button does nothing.
+    // Already listed: the button does nothing, however the name is cased.
     editor.update(Message::NewApp("KeePassXC".to_string()));
+    click(&mut editor, "Add application");
+    editor.update(Message::NewApp("keepassxc".to_string()));
     click(&mut editor, "Add application");
     editor.update(Message::NewApp("Steam".to_string()));
     click(&mut editor, "Add application");

@@ -263,15 +263,19 @@ impl Config {
         Ok((config, mapping_manager))
     }
 
-    /// Check if an application is allowed based on the filter
+    /// Check if an application is in the filter list
     ///
     /// Matching is case-insensitive on both sides.
-    pub fn is_app_allowed(&self, app_name: &str) -> bool {
+    pub fn is_app_listed(&self, app_name: &str) -> bool {
         let app_name = app_name.to_lowercase();
-        let listed = self
-            .filtered_apps
+        self.filtered_apps
             .iter()
-            .any(|app| app.to_lowercase() == app_name);
+            .any(|app| app.to_lowercase() == app_name)
+    }
+
+    /// Check if an application is allowed based on the filter
+    pub fn is_app_allowed(&self, app_name: &str) -> bool {
+        let listed = self.is_app_listed(app_name);
         match self.app_filter_mode {
             AppFilterMode::Blacklist => !listed,
             AppFilterMode::Whitelist => listed,

@@ -392,3 +392,16 @@ fn test_is_app_allowed() {
     assert!(config.is_app_allowed("firefox"), "listed app is allowed");
     assert!(!config.is_app_allowed("kitty"), "unlisted app is blocked");
 }
+
+#[test]
+fn test_is_app_listed_ignores_case() {
+    let config = Config {
+        filtered_apps: vec!["KeePassXC".to_string()],
+        ..Config::default()
+    };
+
+    assert!(config.is_app_listed("KeePassXC"));
+    assert!(config.is_app_listed("keepassxc"));
+    assert!(config.is_app_listed("KEEPASSXC"));
+    assert!(!config.is_app_listed("kitty"));
+}

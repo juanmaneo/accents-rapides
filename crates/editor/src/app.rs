@@ -331,8 +331,7 @@ impl Editor {
     /// The application typed in the add row, if it is not listed yet.
     fn new_app_name(&self) -> Option<&str> {
         let app = self.new_app.trim();
-        (!app.is_empty() && !self.config.filtered_apps.iter().any(|listed| listed == app))
-            .then_some(app)
+        (!app.is_empty() && !self.config.is_app_listed(app)).then_some(app)
     }
 
     fn add_app(&mut self) -> bool {
