@@ -303,6 +303,26 @@ fn test_usage_file_errors() -> Result<()> {
     Ok(())
 }
 
+/// usage.toml records which characters are typed: only its owner may read it,
+/// even when it replaces a file that was world-readable.
+#[cfg(unix)]
+#[test]
+fn test_usage_file_is_private() -> Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+
+    let dir = tempdir()?;
+    let path = dir.path().join("usage.toml");
+    fs::write(&path, "")?;
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o644))?;
+
+    let mut manager = MappingManager::new();
+    manager.record_usage(&MappingKey::Char('e'), "é");
+    manager.save_usage(&path)?;
+
+    assert_eq!(fs::metadata(&path)?.permissions().mode() & 0o777, 0o600);
+    Ok(())
+}
+
 #[test]
 fn test_sort_all_by_usage() {
     let mut manager = MappingManager::new();

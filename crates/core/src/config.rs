@@ -47,6 +47,8 @@ pub(crate) fn read_toml<T: DeserializeOwned>(path: &Path) -> Result<T, CoreError
 ///
 /// The content is written to a temporary file in the same directory and then
 /// renamed over `path`, so a crash mid-save never leaves a truncated file.
+/// The file is private to its owner (mode 0600 on Unix): usage.toml records
+/// which characters are typed.
 pub(crate) fn write_toml<T: Serialize>(path: &Path, value: &T) -> Result<(), CoreError> {
     // Every field we persist is a TOML-representable type, so this cannot fail.
     let content = toml::to_string_pretty(value).expect("always serializes to TOML");
