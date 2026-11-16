@@ -154,7 +154,39 @@ fn test_save_to_file_write_failure() -> Result<()> {
     }
     assert!(error.to_string().contains("failed to write config file"));
 
+    // The temporary file used for the atomic write is cleaned up.
+    assert_eq!(dir_entries(dir.path())?, vec!["config.toml".to_string()]);
+
     Ok(())
+}
+
+#[test]
+fn test_save_to_file_replaces_existing_file_atomically() -> Result<()> {
+    let dir = tempdir()?;
+    let path = dir.path().join("config.toml");
+    // Stale content, longer than what the new save produces.
+    fs::write(&path, "stale = \"x\"\n".repeat(1000))?;
+
+    let config = Config {
+        time_window_ms: 321,
+        ..Config::default()
+    };
+    config.save_to_file(&path)?;
+
+    assert_eq!(Config::load_from_file(&path)?.time_window_ms, 321);
+    // Only the target remains: no temporary file is left next to it.
+    assert_eq!(dir_entries(dir.path())?, vec!["config.toml".to_string()]);
+
+    Ok(())
+}
+
+/// Sorted names of the entries in `dir`.
+fn dir_entries(dir: &Path) -> Result<Vec<String>> {
+    let mut names = fs::read_dir(dir)?
+        .map(|entry| Ok(entry?.file_name().to_string_lossy().into_owned()))
+        .collect::<Result<Vec<_>>>()?;
+    names.sort();
+    Ok(names)
 }
 
 #[test]
