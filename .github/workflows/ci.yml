@@ -114,7 +114,8 @@ jobs:
             pkg update -f
             # Both compilers build against the system's libc++, which the
             # Fcitx5 package is built with.
-            pkg install -y fcitx5 llvm22 gcc16 pkgconf git rustup-init libxkbcommon wayland
+            # noto-emoji is the colour emoji font the editor tests render with.
+            pkg install -y fcitx5 llvm22 gcc16 pkgconf git rustup-init libxkbcommon wayland noto-emoji
             rustup-init -y --profile minimal
           run: |
             . "$HOME/.cargo/env"
