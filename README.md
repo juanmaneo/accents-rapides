@@ -3,361 +3,159 @@
 [![CI](https://github.com/juanmaneo/accents-rapides/actions/workflows/ci.yml/badge.svg)](https://github.com/juanmaneo/accents-rapides/actions/workflows/ci.yml)
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
 
-Accents Rapides is a Rust port of [schnelle-umlaute](https://github.com/Maik-0000FF/schnelle-umlaute), a keyboard utility that provides quick access to special characters and accents (a Linux alternative to Windows PowerToys Quick Accent).
-
-## About
-
-This project is a Rust port of the original [schnelle-umlaute](https://github.com/Maik-0000FF/schnelle-umlaute) C++/Qt Fcitx5 addon, initially created with assistance from Mistral AI.
-
-The implementation uses:
-- **[Rust](https://www.rust-lang.org/)** for the core functionality (key mapping, accent cycling, configuration) and system integration
-- **[iced](https://iced.rs/)** for the editor and the cycle overlay (replacing the original Qt/QML editor and LayerShellQt overlay). The overlay is a `wlr-layer-shell` surface via [`iced_layershell`](https://github.com/waycrate/exwlshelleventloop)
+A Rust port of [schnelle-umlaute](https://github.com/Maik-0000FF/schnelle-umlaute): a Linux/FreeBSD Fcitx5 input method for quick accents. Hold a mapped key, then press the leader key (Alt by default) to cycle through its variants.
 
 ## Features
 
-- Hold a mapped key, then press the leader key (default: Alt) to type an accent character
-- Accent cycling: press the leader key repeatedly to cycle through variants (é → è → ê → ë), forward or backward
-- Sort variants by usage: optionally order each key's cycle by how often you use them
-- Snippets: map single keys to entire text phrases
-- Configurable leader keys (Space, arrow keys, Alt, AltGr, or custom keys)
-- Profiles with multiple mapping sets
-- App blacklist/whitelist to disable the input method in games, password managers, etc.
-- Direct text insertion via Fcitx5 `commitString()` - no clipboard interference
+- Accent cycling, text snippets, and custom mappings
+- Configurable leader key, profiles, and app allow/block lists
+- Optional sorting by usage
+- Per-window gesture state
+- Direct text insertion through Fcitx5, without clipboard access
 
-## Platform Support
+## Platform support
 
-**Linux** and **FreeBSD** are supported (the original is a Fcitx5 addon, and
-Fcitx5 runs on both). Other platforms (Windows, macOS) may come later if someone
-ever wants to contribute on ports.
+Linux and FreeBSD are supported. The overlay needs a Wayland compositor with `wlr-layer-shell` (including COSMIC, KDE Plasma, sway, and Hyprland); it does not work on X11 or GNOME/Mutter.
 
-On FreeBSD everything builds and passes its tests, the native addon included
-(verified on FreeBSD 15.1, and in CI). Two differences come from FreeBSD's
-packages: the Fcitx5 and LLVM versions we need are in the `latest` package
-branch, not `quarterly`, and the Fcitx5 package is built with clang and libc++,
-so both compilers build the addon against the system's libc++ (see
-[Native Fcitx5 addon](#native-fcitx5-addon)).
-
-## Project Structure
-
-```
-accents-rapides/
-├── Cargo.toml              # Workspace root + CLI binary
-├── src/main.rs             # CLI entry point (editor/overlay/config subcommands)
-├── crates/
-│   ├── core/               # Core logic: mappings, cycling, the gesture engine, config
-│   ├── fcitx5/             # Fcitx5 integration: the C ABI (Rust staticlib) and the native addon
-│   │   ├── cpp/            # C++23 addon shim, ABI header, ABI and integration tests (built by `cargo xtask fcitx5`)
-│   │   └── data/           # Fcitx5 addon and input method registration files
-│   ├── editor/             # iced app for managing mappings and settings
-│   ├── overlay/            # iced layer-shell surface showing the accent cycle
-│   ├── ui/                 # What the editor and the overlay share: the font to show a text with
-│   └── test-support/       # Shared test helpers (temporary config, overlay socket, snapshot pixels), not published
-├── xtask/                  # `cargo xtask` developer tasks (coverage, audit, MSRV, C++ addon build)
-├── coverage-ratchet.json   # Coverage gate enforced by `cargo xtask coverage`
-├── deny.toml               # cargo-deny policy used by `cargo xtask audit`
-├── rust-toolchain.toml     # Pinned Rust version used locally and in CI
-├── Dockerfile              # Development container (Docker, Podman, Buildah), see "Development container"
-├── .github/workflows/ci.yml
-├── AUTHORS
-└── LICENSE                 # GNU GPL version 3
-```
+FreeBSD packages for the native addon must come from the `latest` branch. See [Native Fcitx5 addon](#native-fcitx5-addon).
 
 ## Requirements
 
-- Rust via [rustup](https://rustup.rs/): the exact version and components are pinned in
-  `rust-toolchain.toml`. Running `cargo` inside the repository uses that version automatically
-  (the `cargo` that rustup installs is a proxy that reads this file and installs the toolchain if needed)
-- `libxkbcommon` development files (the only system library needed to build).
-  On Debian/Ubuntu: `sudo apt install libxkbcommon-dev`. On FreeBSD:
-  `pkg install libxkbcommon` (packages include their headers). Wayland, X11 and Vulkan are loaded at runtime.
-- For the overlay: a Wayland compositor with `wlr-layer-shell` (KDE Plasma, sway, Hyprland, COSMIC, ...).
-  As in the original, GNOME/Mutter and X11 cannot host it; everything else works there.
-  The overlay renders on the GPU (wgpu) so that its background can be transparent, and falls
-  back to the CPU renderer when no GPU is available.
-- To see emoji in colour in the editor and the overlay: a colour emoji font (Noto Color Emoji,
-  Twitter Color Emoji, JoyPixels, ...). The tests need one too. On Debian/Ubuntu:
-  `sudo apt install fonts-noto-color-emoji`; on FreeBSD: `pkg install noto-emoji`.
+- Rust via [rustup](https://rustup.rs/); the pinned toolchain and components are in `rust-toolchain.toml`.
+- `libxkbcommon` development files:
+  - Debian/Ubuntu: `sudo apt install libxkbcommon-dev`
+  - FreeBSD: `pkg install libxkbcommon`
+- A colour emoji font for emoji rendering and the UI tests:
+  - Debian/Ubuntu: `sudo apt install fonts-noto-color-emoji`
+  - FreeBSD: `pkg install noto-emoji`
+- For the native Fcitx5 addon: g++ ≥ 16.1.0, clang++ ≥ 22.1.8, Fcitx5 ≥ 5.1.22 with development files, and `pkg-config`.
 
-For the native Fcitx5 addon, additionally:
-
-- **g++ ≥ 16.1.0** and **clang++ ≥ 22.1.8**: both are required, the addon is built and tested
-  with each because they report different mistakes
-- **Fcitx5 ≥ 5.1.22** with its development files (headers and `Fcitx5Core.pc`), and `pkg-config`
-
-On FreeBSD, use the `latest` package branch (`quarterly` is older than these minimums;
-set `url: "pkg+https://pkg.FreeBSD.org/${ABI}/latest"` in
-`/usr/local/etc/pkg/repos/FreeBSD.conf`) and install the packages
-`fcitx5 llvm22 gcc16 pkgconf`. They provide the compilers as `clang++22` and `g++16`: the
-FreeBSD base system's own `clang++` is older than the minimum, and `cargo xtask fcitx5`
-picks the highest versioned compiler it finds in `PATH`.
-
-These are minimum versions, the ones the addon was tested with: newer releases are fine. Their
-source of truth is `[workspace.metadata.cpp]` in the root `Cargo.toml`, and `cargo xtask fcitx5`
-checks them before building.
-
-## Building
+## Build and install
 
 ```bash
-# Clone the repository
 git clone https://github.com/juanmaneo/accents-rapides.git
 cd accents-rapides
-
-# Build everything
 cargo build --workspace
-
-# Run the test suite
 cargo test --workspace
 ```
 
-## Usage
+Build and install the Fcitx5 addon, then restart Fcitx5 and add **Accents Rapides** in `fcitx5-configtool`:
 
 ```bash
-# Build the Fcitx5 addon, then install it system-wide (installing builds nothing,
-# so only the copy runs as root; use `doas` instead of `sudo` if you prefer).
-# There is no debug addon: its Rust part is built with `--release` and its C++
-# with `-O2`. Which compiler's build is installed is explained in "Native
-# Fcitx5 addon" below.
 cargo xtask fcitx5 build
 sudo ./target/debug/xtask fcitx5 install
-fcitx5 -r   # then add "Accents Rapides" as an input method in fcitx5-configtool
-
-# Remove it again
-sudo ./target/debug/xtask fcitx5 uninstall
-
-# Build the release version of the editor, the overlay and the CLI, then run them
-cargo build --release --workspace
-./target/release/accents-rapides-editor    # the mapping/profile editor
-./target/release/accents-rapides-overlay   # the cycle overlay, fed by the addon
-./target/release/accents-rapides config    # show configuration info
-
-# Or install them for your user (-> ~/.cargo/bin/), and remove them again
-cargo install --path crates/editor
-cargo install --path crates/overlay
-cargo install --path .
-cargo uninstall accents-rapides-editor accents-rapides-overlay accents-rapides
-
-# To keep the overlay running next to Fcitx5, see "Starting the overlay at login" below
+fcitx5 -r
 ```
 
-With the Accents Rapides input method active:
-- Hold a mapped key (e.g. `a`), then press <kbd>Alt</kbd>, the default leader key, to insert `ä`
-- Press the leader key repeatedly to cycle through variants (e.g. `e` → é → è → ê);
-  while you cycle, the overlay shows every variant with the current one highlighted
-- Release the key without pressing the leader to type the normal letter
-- Alt pressed on its own, or with keys that are not part of a gesture, still reaches
-  applications, so their Alt shortcuts keep working. Another leader (Space, AltGr, an
-  arrow or a custom key) can be chosen in the editor or in `config.toml`
-
-Each window keeps its own gesture: a key held in one window never commits in
-another.
-
-### Starting the overlay at login
-
-The overlay is a per-user program (never root) that draws on your Wayland session, so
-it is started by your desktop at login, not by the system. Install it once, for your
-user only:
+`install` only copies files; it does not build. To remove the addon:
 
 ```bash
-cargo install --path crates/overlay   # -> ~/.cargo/bin/accents-rapides-overlay
+sudo ./target/debug/xtask fcitx5 uninstall
 ```
 
-Autostart entries do not read your shell profile, so `~/.cargo/bin` is usually not on
-their `PATH`: always write the absolute path, the one `which accents-rapides-overlay`
-prints (`/home/you/.cargo/bin/accents-rapides-overlay` below). Then pick **one** of the
-following (two entries would start two overlays, and the second cannot bind the socket).
-Start order does not matter: the addon's messages are dropped until the overlay is up.
+Build and run the apps:
 
-**KDE Plasma, COSMIC** (and any other desktop implementing XDG autostart, on Linux and
-FreeBSD alike): create `~/.config/autostart/accents-rapides-overlay.desktop`:
+```bash
+cargo build --release --workspace
+./target/release/accents-rapides-editor
+./target/release/accents-rapides-overlay
+./target/release/accents-rapides config
+```
+
+## Use
+
+With the input method active, hold a mapped key and press Alt. For example, `e` cycles through `é`, `è`, `ê`, and `ë`. Release the key without pressing Alt to type it normally. Alt shortcuts continue to work when no mapped gesture is active.
+
+Default mappings:
+
+| Hold | Press Alt | Variants |
+|---|---|---|
+| `a` | Alt | ä á à â |
+| `c` | Alt | ç ć č |
+| `e` | Alt | é è ê ë € |
+| `i` | Alt | í ï î ì |
+| `n` | Alt | ñ |
+| `o` | Alt | ö ó ò ô |
+| `s` | Alt | ß |
+| `u` | Alt | ü ú ù û |
+
+### Start the overlay at login
+
+The overlay runs as your user, not as root. On COSMIC, KDE Plasma, or another desktop with XDG autostart, create `~/.config/autostart/accents-rapides-overlay.desktop`:
 
 ```ini
 [Desktop Entry]
 Type=Application
 Name=Accents Rapides overlay
 Exec=/home/you/.cargo/bin/accents-rapides-overlay
-NotShowIn=GNOME
 ```
 
-On Plasma, *System Settings → Autostart → Add… → Add Application*, pointing at the
-binary, creates the same file. The overlay starts at the next login; to start it now
-without logging out, run the binary once from a terminal with `&`.
+Use the binary's absolute path. For sway or Hyprland, add this to the compositor config instead:
 
-**sway / Hyprland**: one line in the compositor configuration:
-
-```
+```text
 exec /home/you/.cargo/bin/accents-rapides-overlay          # sway
 exec-once = /home/you/.cargo/bin/accents-rapides-overlay   # Hyprland
 ```
 
-**systemd user service** (Linux, optional: restarts the overlay if it ever crashes):
-create `~/.config/systemd/user/accents-rapides-overlay.service`:
-
-```ini
-[Unit]
-Description=Accents Rapides overlay
-PartOf=graphical-session.target
-After=graphical-session.target
-
-[Service]
-ExecStart=%h/.cargo/bin/accents-rapides-overlay
-Restart=on-failure
-
-[Install]
-WantedBy=graphical-session.target
-```
-
-then `systemctl --user enable --now accents-rapides-overlay`. Plasma and COSMIC export
-`WAYLAND_DISPLAY` to the systemd user manager themselves; on sway add
-`exec systemctl --user import-environment WAYLAND_DISPLAY` to its configuration.
-
-To remove it: delete the entry you created (for the service, `systemctl --user disable
---now accents-rapides-overlay` first) and run `cargo uninstall accents-rapides-overlay`.
-
-### Default Mappings
-
-| Hold | + | Press | = | Result |
-|------|---|-------|---|--------|
-| <kbd>s</kbd> | + | <kbd>Alt</kbd> | = | ß |
-| <kbd>a</kbd> | + | <kbd>Alt</kbd> | = | ä á à â |
-| <kbd>o</kbd> | + | <kbd>Alt</kbd> | = | ö ó ò ô |
-| <kbd>c</kbd> | + | <kbd>Alt</kbd> | = | ç ć č |
-| <kbd>u</kbd> | + | <kbd>Alt</kbd> | = | ü ú ù û |
-| <kbd>e</kbd> | + | <kbd>Alt</kbd> | = | é è ê ë € |
-| <kbd>n</kbd> | + | <kbd>Alt</kbd> | = | ñ |
-| <kbd>i</kbd> | + | <kbd>Alt</kbd> | = | í ï î ì |
-
-All mappings are fully customizable: add French, Spanish, emoji, Braille, or any Unicode character.
-
 ### Troubleshooting
 
-**The right Alt does not lead** (the left one does): the keyboard layout probably puts
-the Compose key on Right Alt (XKB option `compose:ralt`). That key then sends
-`Multi_key` instead of `Alt_R`, so it is no longer an Alt key: it types the held letter
-unaccented and starts a compose sequence instead. Check with:
-
-```bash
-setxkbmap -query   # "options: compose:ralt" means Right Alt is the Compose key
-```
-
-On KDE Plasma, uncheck *System Settings → Keyboard → Key Bindings → Position of Compose
-key → Right Alt*, or clear the options from a terminal, then log out and in:
-
-```bash
-kwriteconfig6 --file kxkbrc --group Layout --key Options ""
-```
-
-To keep a Compose key, put it on another key (Menu, Right Ctrl...) rather than on Right
-Alt.
+If Right Alt does not trigger accents, it may be configured as the Compose key (`compose:ralt`), which sends `Multi_key` instead of `Alt_R`. Check with `setxkbmap -query`; move Compose to another key or clear that option in your keyboard settings.
 
 ## Configuration
 
-Three files live in `~/.config/accents-rapides/` (`accents-rapides config` prints their
-paths). The first two are created with defaults on first run:
+`accents-rapides config` prints the paths. By default, files are in `~/.config/accents-rapides/`:
 
-- `config.toml`: the leader key (`leader_key = "Alt"` by default) and time window, whether to show the overlay, the app
-  filter (blacklist/whitelist) mode and entries, and whether to sort variants by usage
-- `mappings.toml`: the profiles, their mappings, and which profile is current:
+- `config.toml`: leader key, timing, overlay, app filter, and usage sorting.
+- `mappings.toml`: profiles and mappings. Keys can be characters, `Shift+<character>`, or named keys such as `Space` and `LeftArrow`.
+- `usage.toml`: per-variant usage counts, saved by Fcitx5. Delete it to reset the counts.
 
-  ```toml
-  current_profile = "Default"
+Example mapping:
 
-  [profiles.Default.mappings.a]
-  characters = ["ä"]
-  reverse_cycle = false
+```toml
+current_profile = "Default"
 
-  [profiles.Default.mappings."Shift+A"]
-  characters = ["Ä"]
-  reverse_cycle = false
-  ```
+[profiles.Default.mappings.e]
+characters = ["é", "è", "ê"]
+reverse_cycle = false
+```
 
-  Keys are written as `a`, `Shift+A` or a named key (`Space`, `LeftArrow`, `RightArrow`,
-  `UpArrow`, `DownArrow`); `characters` lists the variants in cycling order.
-
-- `usage.toml`: how many times each variant was typed, written by the addon after every
-  variant typed. With "sort variants by usage" on, each key's cycle starts with its most
-  used variant (ties keep the `mappings.toml` order), from the moment Fcitx5 starts:
-
-  ```toml
-  [e]
-  "è" = 1
-  "é" = 5
-  ```
-
-  Delete the file to start the counts over. A broken one is reported in the Fcitx5 log
-  and replaced by the next variant typed.
-
-The editor (`accents-rapides editor`) edits the first two files and saves every change
-right away. Its tabs:
-
-- **Profiles**: add profiles, use one (make it current) or delete the others
-- **Mappings**: the mappings of the current profile. Variants are typed comma-separated
-  (`é,è,ê`; a literal comma as `,,`), with a reverse-cycling toggle per mapping
-- **Settings**: everything in `config.toml`
-
-No restart is needed after editing them, with the editor or by hand: the addon checks
-both files' modification times whenever a window gains focus, and reloads them if either
-changed (a broken file is reported in the Fcitx5 log and the previous configuration
-stays).
+The editor (`accents-rapides editor`) saves config and mappings immediately. The addon reloads them when a window gains focus. A broken file is reported in the Fcitx5 log; the previous config remains active.
 
 ## Development
 
-While developing, run debug builds straight from the source tree:
+Run the apps from the workspace:
 
 ```bash
-# Launch the mapping/profile editor
 cargo run -- editor
-
-# Try the cycle overlay (the addon tells it what to show)
 cargo run -- overlay
-
-# Show configuration info
 cargo run -- config
 ```
 
-Developer tasks run through the `cargo xtask` pattern (see `.cargo/config.toml`):
+Developer tasks:
 
 ```bash
-# Measure test coverage and enforce the coverage ratchet
-cargo xtask coverage
-
-# Raise the ratchet to the measured coverage (it only ever goes up)
+cargo fmt --all --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
+cargo xtask coverage       # enforce the 100% coverage ratchet
 cargo xtask coverage --bump
-
-# Security audit of the dependency tree (cargo-audit + cargo-deny)
 cargo xtask audit
-
-# Check the workspace with the minimum supported Rust version
 cargo xtask msrv
-
-# Native Fcitx5 addon: xtask calls g++ and clang++ itself (no Makefile, no CMake)
-cargo xtask fcitx5 build      # target/fcitx5/{g++,clang++}/accents-rapides.so
-cargo xtask fcitx5 test       # build, then run the C ABI test (ASan + UBSan) and the test inside Fcitx5
-cargo xtask fcitx5 install    # [--destdir DIR] [--compiler g++|clang++], default: see below
-cargo xtask fcitx5 uninstall  # [--destdir DIR]
+cargo xtask fcitx5 build
+cargo xtask fcitx5 test
 ```
 
-The tools each task needs (`cargo-llvm-cov`, `cargo-audit`, `cargo-deny`) are
-installed automatically with `cargo install --locked` when missing.
+`cargo xtask` installs missing `cargo-llvm-cov`, `cargo-audit`, and `cargo-deny` tools automatically. `cargo xtask fcitx5 test` builds with both C++ compilers, runs the C ABI test under ASan/UBSan, and tests the addon inside Fcitx5. In containers where LeakSanitizer cannot use `ptrace`, run it with `ASAN_OPTIONS=detect_leaks=0`.
 
 ### Development container
 
-The `Dockerfile` is a complete development environment, so that any host with
-Docker, Podman or Buildah can build and test the project, whatever its
-operating system or distribution: the pinned Rust toolchain, g++ and clang++
-new enough for the addon, Fcitx5 and its development files, `libxkbcommon`,
-fonts for the tests, and `cargo-llvm-cov`, `cargo-audit` and `cargo-deny`. It is
-Arch Linux, like the `fcitx5` job of CI, because that is where the compilers
-and Fcitx5 versions we require are current.
-
-Build the image once (add `--pull` later to update it):
+The `Dockerfile` provides the pinned Rust toolchain, current C++ compilers, Fcitx5, system libraries, test fonts, and developer tools. It uses Arch Linux because the required Fcitx5 and compiler versions are not available on every distribution. Build with Docker, Podman, or Buildah:
 
 ```bash
-docker build -t accents-rapides-dev .    # or: podman build ... / buildah build ...
+docker build -t accents-rapides-dev .
 ```
 
-Then run any task in it. The source tree is mounted, so edits on the host are
-seen at once; the build output and the cargo caches go to named volumes, so
-they survive between runs and your `target/` is left alone:
+Run a task with the source mounted and build/cache data in named volumes:
 
 ```bash
 docker run --rm -it \
@@ -368,36 +166,11 @@ docker run --rm -it \
     accents-rapides-dev cargo xtask fcitx5 test
 ```
 
-Replace the last line with any command: `cargo test --workspace`,
-`cargo clippy --workspace --all-targets -- -D warnings`, `cargo xtask coverage`,
-`cargo xtask audit`, `cargo xtask msrv`, or `bash` for a shell.
+For rootless Podman, omit `--user`; the container's root maps to your host user. Docker Desktop and Podman machine can build and test, but their Linux VM does not automatically connect GUI apps to the host desktop. The image is x86_64; on ARM, use `--platform linux/amd64` (emulated and slower).
 
-- **Podman**: run it rootless without `--user`: root in the container is you,
-  so the files it creates in the source tree are yours.
-- **SELinux hosts** (Fedora, RHEL...): mount the source as `"$PWD:/workspace:z"`.
-- **Docker Desktop, Podman machine** (macOS, Windows): the container runs in a
-  Linux VM, so leave out `--user`. Write the command on one line (the `\`
-  continuations are for POSIX shells), with `${PWD}` (PowerShell) or `%cd%` (cmd)
-  for the current directory.
-- **ARM hosts**: the Arch Linux image is x86_64 only. Add
-  `--platform linux/amd64` to `build` and `run`; it is emulated, so slow.
-- The build output is in the `/target` volume (`CARGO_TARGET_DIR`), not in
-  `./target`. To build in the source tree instead, add `-e CARGO_TARGET_DIR=target`.
-- The image contains no source code, only what the build needs, so it only has
-  to be rebuilt when `rust-toolchain.toml` changes, or to update its packages.
-  With an outdated image, rustup still installs the newly pinned toolchain,
-  but again on every run, which is slow.
-- The container has no display connection by default. On a Wayland desktop such
-  as COSMIC, bind-mount the host's runtime directory and pass `WAYLAND_DISPLAY`
-  to run the editor or overlay in the container; see below.
+#### Run GUI apps in COSMIC
 
-#### Running GUI apps in COSMIC (Wayland)
-
-COSMIC runs Wayland. Share its runtime directory with the container so the apps
-can connect to the compositor. Run this from a terminal inside your COSMIC
-session; `XDG_RUNTIME_DIR` and `WAYLAND_DISPLAY` must be set by the session.
-
-**Rootless Podman** (root inside the container maps to your host user):
+Run from a terminal in your COSMIC Wayland session. Share the runtime directory and pass the session variables:
 
 ```bash
 podman run --rm -it \
@@ -411,188 +184,7 @@ podman run --rm -it \
     accents-rapides-dev
 ```
 
-**Docker Engine on Linux** (match your host uid/gid so the Wayland socket is
-accessible and source-tree files stay yours):
-
-```bash
-docker run --rm -it \
-    --user "$(id -u):$(id -g)" \
-    -v "$PWD:/workspace" \
-    -v "$XDG_RUNTIME_DIR:$XDG_RUNTIME_DIR" \
-    -v accents-rapides-cargo:/cargo \
-    -v accents-rapides-target:/target \
-    -v accents-rapides-home:/home/dev \
-    -e XDG_RUNTIME_DIR -e WAYLAND_DISPLAY \
-    -e XDG_SESSION_TYPE=wayland \
-    accents-rapides-dev
-```
-
-Then, at the container prompt:
-
-```bash
-cargo run -- editor    # opens the mapping editor as a COSMIC window
-cargo run -- overlay   # opens the Wayland layer-shell overlay
-```
-
-The overlay uses `$XDG_RUNTIME_DIR/accents-rapides-overlay.sock` by default.
-Mounting the same runtime directory lets the **host's Fcitx5 addon** send it
-updates. Keep the host addon installed and running; don't run a second overlay
-on the host at the same time. The overlay requires COSMIC's layer-shell
-support. You don't need `DISPLAY`, X11 socket access, `--privileged`, or GPU
-devices.
-
-The runtime directory also contains other per-session sockets (including D-Bus
-and PipeWire), which become reachable inside the container. Only run trusted
-source code in it. If `XDG_RUNTIME_DIR` or `WAYLAND_DISPLAY` is empty, run the
-command from a terminal launched in the COSMIC session. On SELinux hosts,
-relabel the workspace bind mount as required by Podman (for example,
-`-v "$PWD:/workspace:z"`); do not relabel the live runtime directory.
-
-### Coverage
-
-Coverage uses [`cargo-llvm-cov`](https://github.com/taiki-e/cargo-llvm-cov) over
-the whole workspace, excluding the developer tooling (`xtask` and
-`test-support`). The ratchet gate is stored in `coverage-ratchet.json` and
-enforced on every `cargo xtask coverage` run: if measured coverage falls below
-the gate, the command fails. The gate is currently at **100%** - full coverage of
-all files, lines, regions and functions - and must stay there.
-
-### Security audit
-
-This tool sits between the keyboard and every application, so dependencies are
-audited on every CI run and weekly:
-
-- [`cargo audit`](https://github.com/rustsec/rustsec/tree/main/cargo-audit) fails on
-  known vulnerabilities in `Cargo.lock` (RustSec database).
-- [`cargo deny check`](https://github.com/EmbarkStudios/cargo-deny) additionally
-  rejects unmaintained and unsound crates, licenses incompatible with
-  GPL-3.0-or-later, and dependencies from anything other than crates.io.
-
-Accepted advisories are listed **only** in `deny.toml`, each with a reason;
-`cargo xtask audit` forwards their ids to `cargo audit`. Currently both come from
-iced 0.14's text rendering (`lru`, `ttf-parser`) and should be removed with the
-next iced release. Both tools download the advisory database, so the audit needs
-network access.
-
-### Rust versions
-
-Two versions, kept coherent by a test in `xtask`:
-
-- `rust-toolchain.toml` pins the **development toolchain** used locally and in
-  CI, so clippy lints and coverage counts don't change under our feet.
-- `rust-version` in the root `Cargo.toml` is the **MSRV** we promise to users
-  building from source. It's the floor set by our dependencies and must never be
-  newer than the pinned toolchain. `cargo xtask msrv` (and CI) checks that the
-  workspace really builds with it.
-
-### Native Fcitx5 addon
-
-Fcitx5 addons are C++ shared libraries, so `crates/fcitx5/cpp/addon.cpp` is a
-thin C++23 engine: it translates each Fcitx5 key event for the Rust gesture
-engine (`accents_rapides_core::InputHandler`) through the C ABI declared in
-`cpp/accents_rapides.hpp`, and applies the returned commit/preedit/forward
-action. It holds no logic of its own. Key translation tables are `constexpr`
-and checked at compile time with `static_assert`, so the per-key work at run
-time is a table lookup and one call into Rust.
-
-The addon state behind the C ABI has three parts:
-
-- **One gesture state per window.** Configuration and mappings are shared, but
-  what is held, shown and pending lives in an `accents_rapides_core::Session`.
-  The C++ side attaches one to every Fcitx5 input context (an
-  `InputContextProperty`), so it is created and freed with its window.
-- **Reload on focus.** Activating a window calls `fcitx_accents_rapides_refresh`,
-  which reloads the configuration only if its file's modification time changed
-  since it was loaded. Fcitx5's own "reload configuration" still forces a reload.
-- **The overlay feed.** While a key cycles through its variants, the addon sends
-  the overlay `Show { variants, index }`, and `Hide` when the cycle ends (merely
-  holding a mapped key shows nothing, or every letter would flash). Messages
-  are JSON datagrams on a Unix socket, `$XDG_RUNTIME_DIR/accents-rapides-overlay.sock`
-  (override it with `ACCENTS_RAPIDES_OVERLAY_SOCKET`). Only changes are sent,
-  without blocking, and ignoring errors: the keyboard works the same whether
-  an overlay runs or not. The overlay binds the socket, replacing one that a
-  previous overlay left behind.
-
-There is no Makefile or CMake project: `cargo xtask fcitx5` is the build
-system of the C++ side. It is plain Rust code (`xtask/src/fcitx5.rs`) that runs
-`pkg-config`, `g++` and `clang++` directly and prints each command line it runs,
-so the exact flags are visible in its output. Everything that depends on the
-operating system (linker flags, the system libraries the Rust staticlib needs,
-how compiler executables are named, which C++ standard library to use and
-which build is released) sits behind the `Platform` trait in
-`xtask/src/fcitx5/platform.rs`, with one module per system:
-`platform/linux.rs` and `platform/freebsd.rs` (where packages install
-versioned compiler names like `g++16` and `clang++22`). Optional hardening
-flags are probed per compiler.
-
-`cargo xtask fcitx5 build` builds the Rust part as a staticlib, then compiles
-and links the addon with every compiler, with warnings as errors, hardening
-flags (`_FORTIFY_SOURCE=3`, stack protector, full RELRO) and only the Fcitx5
-factory symbol exported. `cargo xtask fcitx5 test` then runs two tests, each
-built by each compiler:
-
-- `cpp/abi_test.cpp` checks both sides of the C ABI against each other. It
-  links the Rust staticlib alone, so it runs under AddressSanitizer and
-  UndefinedBehaviorSanitizer. LeakSanitizer needs `ptrace`: where that is
-  blocked (some sandboxes and containers), run it with
-  `ASAN_OPTIONS=detect_leaks=0`.
-- `cpp/fcitx_test.cpp` starts a real Fcitx5 (`fcitx::Instance`) that loads the
-  addon from an installed layout under `target/`, and drives it through
-  Fcitx5's own `testfrontend` addon the way applications do: gestures, Shift,
-  per-window state, what happens to a pending key on an input method switch,
-  focus change or reset, and the reload of a configuration saved meanwhile.
-  Only the test addons and ours are enabled, from the given directories, so a
-  system-wide installation stays out of it. The addon is loaded as built, so
-  there are no sanitizers here.
-
-Fcitx5's API passes standard library types, so every build uses the system's
-C++ standard library, the one Fcitx5 was built with, and both builds pass both
-tests on both systems. **The released `.so`**, the one `cargo xtask fcitx5
-install` copies by default, is the build of the compiler the system builds its
-packages with:
-
-- **Linux**: the g++ build (`target/fcitx5/g++/accents-rapides.so`). Distributions
-  build Fcitx5 with GCC and libstdc++, which clang++ also uses there. The clang++
-  build is a check, installed only with `--compiler clang++`.
-- **FreeBSD**: the clang++ build (`target/fcitx5/clang++/accents-rapides.so`). The
-  Fcitx5 package is built with the base system's clang and libc++. `g++` builds
-  against the same libc++ (`-stdlib=libc++`, which the gcc ports support); its
-  build is the check there, installed only with `--compiler g++`. With libc++,
-  GCC reports false `-Wstringop-overflow` and `-Warray-bounds` positives inside
-  libc++'s `<format>` (a one-line `std::println("{}", 1)` at `-O2` triggers
-  them), so these two warnings are off for g++ on FreeBSD only.
-
-The gesture engine port leaves out some workarounds of the original: deferred
-commits for Alt-led gestures under KWin Wayland auto-repeat, the dual
-(hand-split) custom leaders, and the timer that commits an expired key while it
-is still held (it commits on the next key event instead).
-
-### Unsafe code
-
-`unsafe_code = "forbid"` is set once in the workspace `[workspace.lints]` and
-inherited by every crate except `crates/fcitx5`, whose C ABI for the native
-addon requires `unsafe`.
-
-### Continuous integration
-
-`.github/workflows/ci.yml` runs on every push and pull request, and weekly to
-catch newly published advisories:
-
-- **check**: `cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test`,
-  and `cargo xtask coverage`
-- **msrv**: `cargo xtask msrv`
-- **fcitx5**: `cargo xtask fcitx5 test` in an Arch Linux container, since
-  Ubuntu's compilers are older than the minimums
-- **freebsd** (currently disabled with `if: false`: the runner runs out of disk
-  space): `cargo test --workspace` and `cargo xtask fcitx5 test` in a FreeBSD
-  15.1 VM (QEMU, through [`vmactions/freebsd-vm`](https://github.com/vmactions/freebsd-vm))
-  with the `latest` package branch. The security audit is not repeated there:
-  it works on `Cargo.lock`, which is the same on every system, and `deny.toml`
-  already evaluates the FreeBSD targets
-- **audit**: `cargo xtask audit`
-
-Scratch output from local analysis (coverage exports, logs) belongs under
-`target/`, so `cargo clean` removes it.
+For Docker Engine on Linux, add `--user "$(id -u):$(id -g)"`. Then run `cargo run -- editor` or `cargo run -- overlay` in the container. Sharing the runtime directory also lets the host Fcitx5 addon feed the container's overlay; don't run a second overlay on the host. The mount exposes other session sockets, so only run trusted code.
 
 ## Roadmap
 
@@ -600,26 +192,19 @@ Scratch output from local analysis (coverage exports, logs) belongs under
 - [x] One gesture state per window
 - [x] Reload the configuration when its file changed
 - [x] Overlay fed by the addon
-- [x] Integration test of the addon inside a real Fcitx5 (its `testfrontend` addon)
-- [x] Mappings and profiles persisted (`mappings.toml`) and edited in the editor
-- [x] Persist usage counts across Fcitx5 restarts (`usage.toml`)
-- [x] FreeBSD support (build, tests, native addon and CI on FreeBSD)
-
-### Non-goals
-
-- Feeding the overlay over DBus (the original's `Show(variants, index)` / `Quit()` interface): a Unix datagram socket does the same with no DBus dependency
-- Shipping character preset files for multiple languages: mappings are customised with the editor or directly in the config file
-- Profile merge mode for multi-language setups: a single profile can hold every mapping a user needs
+- [x] Integration test of the addon inside a real Fcitx5
+- [x] Mappings and profiles persisted and edited in the editor
+- [x] Usage counts persisted across Fcitx5 restarts
+- [x] FreeBSD support
 
 ## License
 
-This project is licensed under the GNU General Public License, version 3 or (at
-your option) any later version (`GPL-3.0-or-later`), matching the original
-schnelle-umlaute license. See [`LICENSE`](LICENSE) for the full text and
-[`AUTHORS`](AUTHORS) for the contributors.
+GPL-3.0-or-later. See [LICENSE](LICENSE) and [AUTHORS](AUTHORS).
 
 ## Acknowledgments
 
-- Original [schnelle-umlaute](https://github.com/Maik-0000FF/schnelle-umlaute) project by [Maik-0000FF](https://github.com/Maik-0000FF)
+- Original [schnelle-umlaute](https://github.com/Maik-0000FF/schnelle-umlaute) by [Maik-0000FF](https://github.com/Maik-0000FF)
 - [iced](https://iced.rs/) for the UI toolkit and [waycrate](https://github.com/waycrate) for `iced_layershell`
-- [PowerAccent](https://github.com/damienleroy/PowerAccent) by Damien Leroy (the original inspiration, later integrated into Windows PowerToys as Quick Accent)
+- [PowerAccent](https://github.com/damienleroy/PowerAccent) by Damien Leroy, the original inspiration
+
+For Docker Engine on Linux, add `--user "$(id -u):$(id -g)"`. Then run `cargo run -- editor` or `cargo run -- overlay` in the container. Sharing the runtime directory
