@@ -12,7 +12,7 @@
 # "Development container".
 
 # Arch Linux because the addon needs g++ >= 15.2, clang++ >= 21 and Fcitx5 >=
-# 5.1.22 (see [workspace.metadata.cpp] in Cargo.toml), which other distributions
+# 5.1.19 (see [workspace.metadata.cpp] in Cargo.toml), which other distributions
 # ship late or never. It is a rolling release: rebuild with `--pull` to update.
 # The official image is x86_64 only: on an ARM host, build and run with
 # `--platform linux/amd64` (emulated, so slow).

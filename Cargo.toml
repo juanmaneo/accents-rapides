@@ -34,7 +34,7 @@ iced = { version = "0.14", default-features = false, features = ["tiny-skia", "c
 # required because each catches mistakes the other misses.
 [workspace.metadata.cpp]
 standard = "c++23"
-fcitx5 = "5.1.22"
+fcitx5 = "5.1.19"
 
 [workspace.metadata.cpp.compilers]
 "g++" = "15.2.0"

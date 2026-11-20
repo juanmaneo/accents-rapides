@@ -23,7 +23,7 @@ FreeBSD's required Fcitx5 and compiler packages are in the `latest` branch; see 
 
 - Rust via [rustup](https://rustup.rs/); the pinned toolchain is in `rust-toolchain.toml`.
 - `libxkbcommon` development files and a colour emoji font (for emoji rendering and UI tests).
-- For the native addon: g++ ≥ 15.2.0, clang++ ≥ 21.1.8, Fcitx5 ≥ 5.1.22 with the `Fcitx5Core.pc` and `Fcitx5Module.pc` pkg-config files, and `pkg-config`.
+- For the native addon: g++ ≥ 15.2.0, clang++ ≥ 21.1.8, Fcitx5 ≥ 5.1.19 with the `Fcitx5Core.pc` and `Fcitx5Module.pc` pkg-config files, and `pkg-config`.
 
 Install the system packages for your distro:
 
@@ -33,7 +33,7 @@ Install the system packages for your distro:
 sudo apt install build-essential clang pkg-config libxkbcommon-dev fonts-noto-color-emoji fcitx5 libfcitx5core-dev fcitx5-modules-dev
 ```
 
-Stock Ubuntu 24.04 (Fcitx5 5.1.7) and Debian Trixie (5.1.12) are older than the required 5.1.22, and their compilers may be too old too. Use a newer Fcitx5 and compiler source.
+Stock Ubuntu 24.04 (Fcitx5 5.1.7) and Debian Trixie (5.1.12) are older than the required 5.1.19, and their compilers may be too old too. Use a newer Fcitx5 and compiler source.
 
 **Arch Linux**
 
