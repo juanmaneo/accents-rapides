@@ -21,16 +21,36 @@ FreeBSD's required Fcitx5 and compiler packages are in the `latest` branch; see 
 
 ## Requirements and Fcitx5 setup
 
-Install Rust via [rustup](https://rustup.rs/) (toolchain in `rust-toolchain.toml`), `libxkbcommon` development files, and a colour emoji font. On Debian/Ubuntu, install these with `sudo apt install libxkbcommon-dev fonts-noto-color-emoji`; on FreeBSD, use `pkg install libxkbcommon noto-emoji`. The native addon also needs g++ ≥ 16.1.0, clang++ ≥ 22.1.8, Fcitx5 ≥ 5.1.22 with `Fcitx5Core.pc` and `Fcitx5Module.pc`, and `pkg-config`. Debian/Ubuntu packages are `fcitx5 libfcitx5core-dev fcitx5-modules-dev pkg-config`, but Ubuntu 24.04 (5.1.7) and Debian Trixie (5.1.12) ship versions below the minimum; use a newer source or repository. Arch: `sudo pacman -Syu --needed base-devel clang fcitx5 pkgconf`. FreeBSD requires the `latest` package branch:
+- Rust via [rustup](https://rustup.rs/); the pinned toolchain is in `rust-toolchain.toml`.
+- `libxkbcommon` development files and a colour emoji font (for emoji rendering and UI tests).
+- For the native addon: g++ ≥ 16.1.0, clang++ ≥ 22.1.8, Fcitx5 ≥ 5.1.22 with the `Fcitx5Core.pc` and `Fcitx5Module.pc` pkg-config files, and `pkg-config`.
+
+Install the system packages for your distro:
+
+**Debian/Ubuntu**
+
+```sh
+sudo apt install build-essential clang pkg-config libxkbcommon-dev fonts-noto-color-emoji fcitx5 libfcitx5core-dev fcitx5-modules-dev
+```
+
+Stock Ubuntu 24.04 (Fcitx5 5.1.7) and Debian Trixie (5.1.12) are older than the required 5.1.22, and their compilers may be too old too. Use a newer Fcitx5 and compiler source.
+
+**Arch Linux**
+
+```sh
+sudo pacman -Syu --needed base-devel clang pkgconf libxkbcommon noto-fonts-emoji fcitx5
+```
+
+**FreeBSD** (requires the `latest` package branch)
 
 ```sh
 sudo mkdir -p /usr/local/etc/pkg/repos
 echo 'FreeBSD-ports: { url: "pkg+https://pkg.FreeBSD.org/${ABI}/latest" }' | sudo tee /usr/local/etc/pkg/repos/FreeBSD.conf
 sudo pkg update -f
-sudo pkg install fcitx5 llvm22 gcc16 pkgconf
+sudo pkg install libxkbcommon noto-emoji fcitx5 llvm22 gcc16 pkgconf
 ```
 
-Check the installed Fcitx5 version with `pkg-config --modversion Fcitx5Core`; `cargo xtask fcitx5` checks the toolchain before building.
+Check the installed Fcitx5 version with `pkg-config --modversion Fcitx5Core`. `cargo xtask fcitx5` checks the toolchain before building.
 
 ## Build and install
 
