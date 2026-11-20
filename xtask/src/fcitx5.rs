@@ -598,10 +598,10 @@ mod tests {
 
     #[test]
     fn version_check_accepts_newer_and_rejects_older() {
-        assert!(check_version("g++", "16.2.1", "16.2.1").is_ok());
-        assert!(check_version("g++", "17.0.0", "16.2.1").is_ok());
-        assert!(check_version("g++", "16.10", "16.2.1").is_ok());
-        assert!(check_version("g++", "14.2.0", "16.2.1").is_err());
+        assert!(check_version("g++", "15.2.0", "15.2.0").is_ok());
+        assert!(check_version("g++", "17.0.0", "15.2.0").is_ok());
+        assert!(check_version("g++", "16.10", "15.2.0").is_ok());
+        assert!(check_version("g++", "15.1.9", "15.2.0").is_err());
     }
 
     #[test]

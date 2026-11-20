@@ -37,7 +37,7 @@ standard = "c++23"
 fcitx5 = "5.1.22"
 
 [workspace.metadata.cpp.compilers]
-"g++" = "16.1.0"
+"g++" = "15.2.0"
 "clang++" = "21.1.8"
 
 # Lints shared by every member (`[lints] workspace = true`). The only crate
