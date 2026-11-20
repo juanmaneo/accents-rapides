@@ -41,6 +41,12 @@ Stock Ubuntu 24.04 (Fcitx5 5.1.7) and Debian Trixie (5.1.12) are older than the 
 sudo pacman -Syu --needed base-devel clang pkgconf libxkbcommon noto-fonts-emoji fcitx5
 ```
 
+**Fedora**
+
+```sh
+sudo dnf install gcc-c++ clang pkgconf-pkg-config libxkbcommon-devel google-noto-color-emoji-fonts fcitx5 fcitx5-devel libasan libubsan
+```
+
 **FreeBSD** (requires the `latest` package branch)
 
 ```sh

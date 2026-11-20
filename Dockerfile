@@ -2,7 +2,7 @@
 # rust-toolchain.toml, the C++ toolchain and Fcitx5 of the native addon, and the
 # tools behind `cargo xtask` (llvm-cov, audit, deny). The C++ toolchain and
 # Fcitx5 meet the minimums of [workspace.metadata.cpp] in Cargo.toml; the fcitx5
-# job of .github/workflows/ci.yml still runs on Arch Linux.
+# job of .github/workflows/ci.yml runs on Arch, Ubuntu 26.04 and Fedora.
 #
 # The same file builds with Docker, Podman and Buildah: plain instructions only
 # (no BuildKit syntax) and a fully qualified base image, since Podman refuses

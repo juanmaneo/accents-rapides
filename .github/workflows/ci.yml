@@ -54,16 +54,35 @@ jobs:
       - run: cargo xtask msrv
 
   fcitx5:
-    name: Native Fcitx5 addon (g++ and clang++)
+    name: Native Fcitx5 addon (${{ matrix.os }})
     runs-on: ubuntu-24.04
-    # Ubuntu 24.04 ships GCC 13/14 and Clang 18, below the minimums in
-    # Cargo.toml [workspace.metadata.cpp]; Arch Linux tracks current releases.
-    container: archlinux:latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Each container's distribution ships compilers and Fcitx5 that meet the
+        # minimums in Cargo.toml [workspace.metadata.cpp]. The runner's own
+        # Ubuntu 24.04 does not (GCC 13/14, Clang 18), hence the 26.04 container.
+        include:
+          - os: arch
+            container: archlinux:latest
+            install: pacman -Syu --noconfirm --needed base-devel clang fcitx5 pkgconf rustup git
+          - os: ubuntu
+            container: ubuntu:26.04
+            install: apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential clang pkgconf git rustup ca-certificates fcitx5 libfcitx5core-dev fcitx5-modules-dev
+          - os: fedora
+            container: fedora:latest
+            # Fedora's rustup package only ships rustup-init, and the sanitizer
+            # runtimes are separate packages.
+            install: dnf install -y gcc-c++ clang pkgconf-pkg-config git rustup fcitx5 fcitx5-devel libasan libubsan && rustup-init -y --profile minimal --default-toolchain none
+    container: ${{ matrix.container }}
     steps:
       - name: Install the C++ toolchain, Fcitx5 and rustup
-        run: pacman -Syu --noconfirm --needed base-devel clang fcitx5 pkgconf rustup git
+        run: ${{ matrix.install }}
+      - run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
       - uses: actions/checkout@v4
-      - run: rustup toolchain install
+      # `rustup show` installs the toolchain pinned in rust-toolchain.toml; the
+      # Ubuntu rustup has no bare `rustup toolchain install`.
+      - run: rustup show
       - uses: Swatinem/rust-cache@v2
       # Checks the compiler and Fcitx5 versions, builds the addon with both
       # compilers, runs the C ABI test under ASan and UBSan, and the
@@ -72,12 +91,14 @@ jobs:
 
   freebsd:
     name: FreeBSD (tests and native Fcitx5 addon)
-    # Disabled: the runner runs out of disk space ("No space left on device")
-    # with the FreeBSD VM plus the LLVM and GCC packages. Remove this line to
-    # re-enable the job.
-    if: false
     runs-on: ubuntu-24.04
     steps:
+      # The VM plus the LLVM and GCC packages once filled the runner ("No space
+      # left on device"): drop preinstalled toolchains this job does not use.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
       - uses: actions/checkout@v4
       # A FreeBSD VM (QEMU) on the Linux runner; the sources are copied in.
       - uses: vmactions/freebsd-vm@v1
