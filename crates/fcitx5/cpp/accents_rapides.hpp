@@ -3,7 +3,6 @@
 // abi_test.cpp checks them against each other.
 #pragma once
 
-#include <algorithm>
 #include <array>
 #include <bit>
 #include <cstdint>
@@ -11,6 +10,20 @@
 #include <memory>
 #include <string_view>
 #include <type_traits>
+
+// GCC before 16 uses plain loops instead of the <algorithm> ranges calls.
+// Define ACCENTS_RAPIDES_NO_STD_ALGORITHM to force that path on any compiler.
+#if !defined(ACCENTS_RAPIDES_NO_STD_ALGORITHM)
+#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ < 16
+#define ACCENTS_RAPIDES_NO_STD_ALGORITHM 1
+#else
+#define ACCENTS_RAPIDES_NO_STD_ALGORITHM 0
+#endif
+#endif
+
+#if !ACCENTS_RAPIDES_NO_STD_ALGORITHM
+#include <algorithm>
+#endif
 
 extern "C" {
 
@@ -72,11 +85,37 @@ inline constexpr std::uint32_t super = 1U << 4;
 inline constexpr std::uint32_t modifier = 1U << 5;
 
 inline constexpr std::array all{release, shift, ctrl, alt, super, modifier};
+
+#if ACCENTS_RAPIDES_NO_STD_ALGORITHM
+namespace detail {
+template <std::size_t N>
+constexpr bool flags_are_bits(const std::array<std::uint32_t, N> &flags) {
+    for (auto flag : flags) {
+        if (!std::has_single_bit(flag)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+template <std::size_t N>
+constexpr bool flags_are_distinct(const std::array<std::uint32_t, N> &flags) {
+    std::uint32_t combined = 0;
+    for (auto flag : flags) {
+        combined |= flag;
+    }
+    return combined == (1U << flags.size()) - 1U;
+}
+} // namespace detail
+static_assert(detail::flags_are_bits(all), "each key flag is one bit");
+static_assert(detail::flags_are_distinct(all), "key flags are distinct and contiguous");
+#else
 static_assert(std::ranges::all_of(all, [](std::uint32_t f) { return std::has_single_bit(f); }),
               "each key flag is one bit");
 static_assert(std::ranges::fold_left(all, 0U, std::bit_or{}) ==
                   (1U << all.size()) - 1U,
               "key flags are distinct and contiguous");
+#endif
 } // namespace key_flag
 
 /// Names of the keys that the core knows by name (`key_name` in
