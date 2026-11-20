@@ -11,7 +11,7 @@
 # context is just rust-toolchain.toml (see .dockerignore). Usage: README.md,
 # "Development container".
 
-# Arch Linux because the addon needs g++ >= 16, clang++ >= 22 and Fcitx5 >=
+# Arch Linux because the addon needs g++ >= 16, clang++ >= 21 and Fcitx5 >=
 # 5.1.22 (see [workspace.metadata.cpp] in Cargo.toml), which other distributions
 # ship late or never. It is a rolling release: rebuild with `--pull` to update.
 # The official image is x86_64 only: on an ARM host, build and run with
