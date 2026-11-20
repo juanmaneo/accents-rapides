@@ -172,7 +172,7 @@ cargo xtask fcitx5 test
 
 ### Development container
 
-The `Dockerfile` provides the pinned Rust toolchain, current C++ compilers, Fcitx5, system libraries, test fonts, and developer tools. It uses Arch Linux because the required Fcitx5 and compiler versions are not available on every distribution. Build with Docker, Podman, or Buildah:
+The `Dockerfile` provides the pinned Rust toolchain, current C++ compilers, Fcitx5, system libraries, test fonts, and developer tools. It is based on Ubuntu 26.04, whose compilers and Fcitx5 meet the minimums in `Cargo.toml`. Build with Docker, Podman, or Buildah:
 
 ```bash
 docker build -t accents-rapides-dev .
@@ -189,7 +189,7 @@ docker run --rm -it \
     accents-rapides-dev cargo xtask fcitx5 test
 ```
 
-For rootless Podman, omit `--user`; the container's root maps to your host user. Docker Desktop and Podman machine can build and test, but their Linux VM does not automatically connect GUI apps to the host desktop. The image is x86_64; on ARM, use `--platform linux/amd64` (emulated and slower).
+For rootless Podman, omit `--user`; the container's root maps to your host user. Docker Desktop and Podman machine can build and test, but their Linux VM does not automatically connect GUI apps to the host desktop. Only x86_64 has been tested.
 
 #### Run GUI apps in COSMIC
 

@@ -1,7 +1,8 @@
 # Development environment for accents-rapides: the Rust toolchain pinned in
 # rust-toolchain.toml, the C++ toolchain and Fcitx5 of the native addon, and the
-# tools behind `cargo xtask` (llvm-cov, audit, deny). It is the environment of
-# the `fcitx5` job of .github/workflows/ci.yml, so what passes here passes there.
+# tools behind `cargo xtask` (llvm-cov, audit, deny). The C++ toolchain and
+# Fcitx5 meet the minimums of [workspace.metadata.cpp] in Cargo.toml; the fcitx5
+# job of .github/workflows/ci.yml still runs on Arch Linux.
 #
 # The same file builds with Docker, Podman and Buildah: plain instructions only
 # (no BuildKit syntax) and a fully qualified base image, since Podman refuses
@@ -11,12 +12,10 @@
 # context is just rust-toolchain.toml (see .dockerignore). Usage: README.md,
 # "Development container".
 
-# Arch Linux because the addon needs g++ >= 15.2, clang++ >= 21 and Fcitx5 >=
-# 5.1.19 (see [workspace.metadata.cpp] in Cargo.toml), which other distributions
-# ship late or never. It is a rolling release: rebuild with `--pull` to update.
-# The official image is x86_64 only: on an ARM host, build and run with
-# `--platform linux/amd64` (emulated, so slow).
-FROM docker.io/library/archlinux:latest
+# Ubuntu 26.04 because its g++ 15.2, clang++ 21.1.8 and Fcitx5 5.1.19 are the
+# minimums of [workspace.metadata.cpp]. Ubuntu does not package cargo-audit,
+# cargo-deny or cargo-llvm-cov, so they are built below.
+FROM docker.io/library/ubuntu:26.04
 
 LABEL org.opencontainers.image.title="accents-rapides development environment" \
       org.opencontainers.image.source="https://github.com/juanmaneo/accents-rapides" \
@@ -37,26 +36,33 @@ ENV RUSTUP_HOME=/rustup \
     PATH=/cargo/bin:$PATH
 
 # Compilers and Fcitx5 (its headers and the testing addons that
-# `cargo xtask fcitx5 test` needs are in the fcitx5 package), libxkbcommon (the
+# `cargo xtask fcitx5 test` needs are in the fcitx5 packages), libxkbcommon (the
 # only system library the Rust build needs), a colour emoji font and a text font
-# (the editor and overlay tests render both), and the cargo tools prebuilt,
-# instead of compiled by `cargo xtask` on first use.
-RUN pacman -Syu --noconfirm --needed \
-        base-devel clang fcitx5 pkgconf git rustup \
-        libxkbcommon noto-fonts-emoji ttf-dejavu \
-        cargo-llvm-cov cargo-audit cargo-deny \
-    && rm -rf /var/cache/pacman/pkg/*
+# (the editor and overlay tests render both), and rustup, which installs the
+# toolchain pinned in rust-toolchain.toml.
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+        build-essential clang pkgconf git rustup ca-certificates \
+        libxkbcommon-dev fcitx5 libfcitx5core-dev fcitx5-modules-dev \
+        fonts-noto-color-emoji fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/*
 
 # The toolchain, components and profile that rust-toolchain.toml pins, made the
-# default so that cargo also works outside the source tree. If the pin changes,
+# default so that cargo also works outside the source tree. `rustup show` reads
+# the pin and installs it, since Ubuntu's rustup 1.27 needs arguments for
+# `rustup toolchain install`. If the pin changes,
 # rebuild the image: rustup would install the new toolchain by itself, but on
-# every run, since containers are thrown away. The permissions are set in this
-# same step, or the layer would hold a second copy of the whole toolchain.
+# every run, since containers are thrown away. The cargo tools are built in the
+# same step, and their download caches removed, so that the layer stays small.
+# The permissions are set in this step too, or the layer would hold a second
+# copy of the whole toolchain.
 COPY rust-toolchain.toml /tmp/toolchain/
 RUN (cd /tmp/toolchain \
-        && rustup toolchain install \
+        && rustup show \
         && rustup default "$(rustup show active-toolchain | cut -d' ' -f1)") \
     && rm -rf /tmp/toolchain \
+    && cargo install --locked cargo-llvm-cov cargo-audit cargo-deny \
+    && rm -rf /cargo/registry /cargo/git \
     && mkdir -p /cargo /target /home/dev /workspace \
     && chmod -R a+rwX /rustup /cargo /target /home/dev \
     && git config --system --add safe.directory /workspace
