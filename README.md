@@ -17,34 +17,20 @@ A Rust port of [schnelle-umlaute](https://github.com/Maik-0000FF/schnelle-umlaut
 
 Linux and FreeBSD are supported. The overlay needs a Wayland compositor with `wlr-layer-shell` (including COSMIC, KDE Plasma, sway, and Hyprland); it does not work on X11 or GNOME/Mutter.
 
-FreeBSD's required Fcitx5 and compiler packages are in the `latest` branch; see [Install Fcitx5](#install-fcitx5).
+FreeBSD's required Fcitx5 and compiler packages are in the `latest` branch; see [Fcitx5 setup](#requirements-and-fcitx5-setup).
 
-## Requirements
+## Requirements and Fcitx5 setup
 
-- Rust via [rustup](https://rustup.rs/); the pinned toolchain and components are in `rust-toolchain.toml`.
-- `libxkbcommon` development files:
-  - Debian/Ubuntu: `sudo apt install libxkbcommon-dev`
-  - FreeBSD: `pkg install libxkbcommon`
-- A colour emoji font for emoji rendering and the UI tests:
-  - Debian/Ubuntu: `sudo apt install fonts-noto-color-emoji`
-  - FreeBSD: `pkg install noto-emoji`
-- For the native addon: g++ ≥ 16.1.0, clang++ ≥ 22.1.8, Fcitx5 ≥ 5.1.22 with development files, and `pkg-config`.
+Install Rust via [rustup](https://rustup.rs/) (toolchain in `rust-toolchain.toml`), `libxkbcommon` development files, and a colour emoji font. On Debian/Ubuntu, install these with `sudo apt install libxkbcommon-dev fonts-noto-color-emoji`; on FreeBSD, use `pkg install libxkbcommon noto-emoji`. The native addon also needs g++ ≥ 16.1.0, clang++ ≥ 22.1.8, Fcitx5 ≥ 5.1.22 with `Fcitx5Core.pc` and `Fcitx5Module.pc`, and `pkg-config`. Debian/Ubuntu packages are `fcitx5 libfcitx5core-dev fcitx5-modules-dev pkg-config`, but Ubuntu 24.04 (5.1.7) and Debian Trixie (5.1.12) ship versions below the minimum; use a newer source or repository. Arch: `sudo pacman -Syu --needed base-devel clang fcitx5 pkgconf`. FreeBSD requires the `latest` package branch:
 
-### Install Fcitx5
+```sh
+sudo mkdir -p /usr/local/etc/pkg/repos
+echo 'FreeBSD-ports: { url: "pkg+https://pkg.FreeBSD.org/${ABI}/latest" }' | sudo tee /usr/local/etc/pkg/repos/FreeBSD.conf
+sudo pkg update -f
+sudo pkg install fcitx5 llvm22 gcc16 pkgconf
+```
 
-Install Fcitx5 and its development files before building the addon. The `Fcitx5Core.pc` and `Fcitx5Module.pc` pkg-config files must be available.
-
-- **Arch Linux:** `sudo pacman -Syu --needed base-devel clang fcitx5 pkgconf`
-- **FreeBSD:** switch to the `latest` package branch, then install `fcitx5 llvm22 gcc16 pkgconf`:
-
-  ```sh
-  sudo mkdir -p /usr/local/etc/pkg/repos
-  echo 'FreeBSD-ports: { url: "pkg+https://pkg.FreeBSD.org/${ABI}/latest" }' | sudo tee /usr/local/etc/pkg/repos/FreeBSD.conf
-  sudo pkg update -f
-  sudo pkg install fcitx5 llvm22 gcc16 pkgconf
-  ```
-
-For other distributions, install Fcitx5, its development headers, and compilers meeting the versions above. Check the installed Fcitx5 version with `pkg-config --modversion Fcitx5Core`; `cargo xtask fcitx5` checks the toolchain before building.
+Check the installed Fcitx5 version with `pkg-config --modversion Fcitx5Core`; `cargo xtask fcitx5` checks the toolchain before building.
 
 ## Build and install
 
