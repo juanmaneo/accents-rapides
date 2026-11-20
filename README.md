@@ -387,8 +387,66 @@ Replace the last line with any command: `cargo test --workspace`,
   to be rebuilt when `rust-toolchain.toml` changes, or to update its packages.
   With an outdated image, rustup still installs the newly pinned toolchain,
   but again on every run, which is slow.
-- The container has no display: the editor and the overlay, which need a Wayland
-  compositor, are run on the host. Their tests render off-screen and run fine.
+- The container has no display connection by default. On a Wayland desktop such
+  as COSMIC, bind-mount the host's runtime directory and pass `WAYLAND_DISPLAY`
+  to run the editor or overlay in the container; see below.
+
+#### Running GUI apps in COSMIC (Wayland)
+
+COSMIC runs Wayland. Share its runtime directory with the container so the apps
+can connect to the compositor. Run this from a terminal inside your COSMIC
+session; `XDG_RUNTIME_DIR` and `WAYLAND_DISPLAY` must be set by the session.
+
+**Rootless Podman** (root inside the container maps to your host user):
+
+```bash
+podman run --rm -it \
+    -v "$PWD:/workspace" \
+    -v "$XDG_RUNTIME_DIR:$XDG_RUNTIME_DIR" \
+    -v accents-rapides-cargo:/cargo \
+    -v accents-rapides-target:/target \
+    -v accents-rapides-home:/home/dev \
+    -e XDG_RUNTIME_DIR -e WAYLAND_DISPLAY \
+    -e XDG_SESSION_TYPE=wayland \
+    accents-rapides-dev
+```
+
+**Docker Engine on Linux** (match your host uid/gid so the Wayland socket is
+accessible and source-tree files stay yours):
+
+```bash
+docker run --rm -it \
+    --user "$(id -u):$(id -g)" \
+    -v "$PWD:/workspace" \
+    -v "$XDG_RUNTIME_DIR:$XDG_RUNTIME_DIR" \
+    -v accents-rapides-cargo:/cargo \
+    -v accents-rapides-target:/target \
+    -v accents-rapides-home:/home/dev \
+    -e XDG_RUNTIME_DIR -e WAYLAND_DISPLAY \
+    -e XDG_SESSION_TYPE=wayland \
+    accents-rapides-dev
+```
+
+Then, at the container prompt:
+
+```bash
+cargo run -- editor    # opens the mapping editor as a COSMIC window
+cargo run -- overlay   # opens the Wayland layer-shell overlay
+```
+
+The overlay uses `$XDG_RUNTIME_DIR/accents-rapides-overlay.sock` by default.
+Mounting the same runtime directory lets the **host's Fcitx5 addon** send it
+updates. Keep the host addon installed and running; don't run a second overlay
+on the host at the same time. The overlay requires COSMIC's layer-shell
+support. You don't need `DISPLAY`, X11 socket access, `--privileged`, or GPU
+devices.
+
+The runtime directory also contains other per-session sockets (including D-Bus
+and PipeWire), which become reachable inside the container. Only run trusted
+source code in it. If `XDG_RUNTIME_DIR` or `WAYLAND_DISPLAY` is empty, run the
+command from a terminal launched in the COSMIC session. On SELinux hosts,
+relabel the workspace bind mount as required by Podman (for example,
+`-v "$PWD:/workspace:z"`); do not relabel the live runtime directory.
 
 ### Coverage
 
