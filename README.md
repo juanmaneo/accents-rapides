@@ -203,16 +203,11 @@ podman run --rm -it \
 
 For Docker Engine on Linux, add `--user "$(id -u):$(id -g)"`. Then run `cargo run -- editor` or `cargo run -- overlay` in the container. Sharing the runtime directory also lets the host Fcitx5 addon feed the container's overlay; don't run a second overlay on the host. The mount exposes other session sockets, so only run trusted code.
 
-## Roadmap
+## Non-goals
 
-- [x] Native Fcitx5 addon (C++ shim calling the Rust C ABI)
-- [x] One gesture state per window
-- [x] Reload the configuration when its file changed
-- [x] Overlay fed by the addon
-- [x] Integration test of the addon inside a real Fcitx5
-- [x] Mappings and profiles persisted and edited in the editor
-- [x] Usage counts persisted across Fcitx5 restarts
-- [x] FreeBSD support
+- DBus for overlay updates; a Unix datagram socket is used instead.
+- Bundled language presets; mappings are customized in the editor or config.
+- Profile merging; one profile can contain all the mappings you need.
 
 ## License
 
