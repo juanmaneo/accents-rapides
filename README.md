@@ -39,18 +39,19 @@ cargo build --workspace
 cargo test --workspace
 ```
 
-Build and install the Fcitx5 addon, then restart Fcitx5 and add **Accents Rapides** in `fcitx5-configtool`:
+Build the addon and release `xtask`, then install it, restart Fcitx5, and add **Accents Rapides** in `fcitx5-configtool`:
 
 ```bash
 cargo xtask fcitx5 build
-sudo ./target/debug/xtask fcitx5 install
+cargo build --release -p xtask
+sudo ./target/release/xtask fcitx5 install
 fcitx5 -r
 ```
 
 `install` only copies files; it does not build. To remove the addon:
 
 ```bash
-sudo ./target/debug/xtask fcitx5 uninstall
+sudo ./target/release/xtask fcitx5 uninstall
 ```
 
 Build and run the apps:
@@ -206,5 +207,3 @@ GPL-3.0-or-later. See [LICENSE](LICENSE) and [AUTHORS](AUTHORS).
 - Original [schnelle-umlaute](https://github.com/Maik-0000FF/schnelle-umlaute) by [Maik-0000FF](https://github.com/Maik-0000FF)
 - [iced](https://iced.rs/) for the UI toolkit and [waycrate](https://github.com/waycrate) for `iced_layershell`
 - [PowerAccent](https://github.com/damienleroy/PowerAccent) by Damien Leroy, the original inspiration
-
-For Docker Engine on Linux, add `--user "$(id -u):$(id -g)"`. Then run `cargo run -- editor` or `cargo run -- overlay` in the container. Sharing the runtime directory
