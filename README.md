@@ -17,7 +17,7 @@ A Rust port of [schnelle-umlaute](https://github.com/Maik-0000FF/schnelle-umlaut
 
 Linux and FreeBSD are supported. The overlay needs a Wayland compositor with `wlr-layer-shell` (including COSMIC, KDE Plasma, sway, and Hyprland); it does not work on X11 or GNOME/Mutter.
 
-FreeBSD packages for the native addon must come from the `latest` branch. See [Native Fcitx5 addon](#native-fcitx5-addon).
+FreeBSD's required Fcitx5 and compiler packages are in the `latest` branch; see [Install Fcitx5](#install-fcitx5).
 
 ## Requirements
 
@@ -28,7 +28,23 @@ FreeBSD packages for the native addon must come from the `latest` branch. See [N
 - A colour emoji font for emoji rendering and the UI tests:
   - Debian/Ubuntu: `sudo apt install fonts-noto-color-emoji`
   - FreeBSD: `pkg install noto-emoji`
-- For the native Fcitx5 addon: g++ ≥ 16.1.0, clang++ ≥ 22.1.8, Fcitx5 ≥ 5.1.22 with development files, and `pkg-config`.
+- For the native addon: g++ ≥ 16.1.0, clang++ ≥ 22.1.8, Fcitx5 ≥ 5.1.22 with development files, and `pkg-config`.
+
+### Install Fcitx5
+
+Install Fcitx5 and its development files before building the addon. The `Fcitx5Core.pc` and `Fcitx5Module.pc` pkg-config files must be available.
+
+- **Arch Linux:** `sudo pacman -Syu --needed base-devel clang fcitx5 pkgconf`
+- **FreeBSD:** switch to the `latest` package branch, then install `fcitx5 llvm22 gcc16 pkgconf`:
+
+  ```sh
+  sudo mkdir -p /usr/local/etc/pkg/repos
+  echo 'FreeBSD-ports: { url: "pkg+https://pkg.FreeBSD.org/${ABI}/latest" }' | sudo tee /usr/local/etc/pkg/repos/FreeBSD.conf
+  sudo pkg update -f
+  sudo pkg install fcitx5 llvm22 gcc16 pkgconf
+  ```
+
+For other distributions, install Fcitx5, its development headers, and compilers meeting the versions above. Check the installed Fcitx5 version with `pkg-config --modversion Fcitx5Core`; `cargo xtask fcitx5` checks the toolchain before building.
 
 ## Build and install
 
