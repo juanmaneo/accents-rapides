@@ -238,6 +238,26 @@ fn accepts_flag(compiler: &str, flag: &str) -> bool {
     child.wait().is_ok_and(|status| status.success())
 }
 
+/// Whether `compiler`, with `flags`, finds the C++ standard library headers.
+fn finds_standard_headers(compiler: &str, flags: &[String]) -> bool {
+    let Ok(mut child) = Command::new(compiler)
+        .args(flags)
+        .args(["-std=c++23", "-fsyntax-only", "-x", "c++", "-"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+    else {
+        return false;
+    };
+    if let Some(mut stdin) = child.stdin.take() {
+        use std::io::Write;
+        // A write error means the compiler exited early: its status decides.
+        let _ = stdin.write_all(b"#include <array>\n#include <algorithm>\n");
+    }
+    child.wait().is_ok_and(|status| status.success())
+}
+
 /// The hardening flags of `compiler`: the base set plus every optional one
 /// it accepts.
 fn hardening_of(compiler: &str) -> Vec<String> {
@@ -271,10 +291,23 @@ fn check_toolchain(
             format!("{name} ({executable})")
         };
         check_version(&label, found, minimum)?;
-        let flags = platform
+        let stdlib: Vec<String> = platform
             .cxx_stdlib(name)
             .iter()
             .map(|&flag| flag.to_owned())
+            .collect();
+        // clang++ on Linux uses the newest GCC installed: with gcc-16 but not
+        // libstdc++-16-dev, every standard header is missing.
+        ensure!(
+            finds_standard_headers(&executable, &stdlib),
+            "{label} cannot find the C++ standard library headers (<array>). \
+             Install the development files of the standard library it uses: \
+             `{executable} -v -x c++ -fsyntax-only /dev/null` shows the \
+             selected GCC installation; on Debian/Ubuntu, install the \
+             matching libstdc++-<version>-dev"
+        );
+        let flags = stdlib
+            .into_iter()
             .chain(hardening_of(&executable))
             .collect();
         compilers.insert(name.clone(), Compiler { executable, flags });

@@ -35,6 +35,8 @@ sudo apt install build-essential clang pkg-config libxkbcommon-dev fonts-noto-co
 
 Stock Ubuntu 24.04 (Fcitx5 5.1.7) and Debian Trixie (5.1.12) are older than the required 5.1.19, and their compilers may be too old too. Use a newer Fcitx5 and compiler source.
 
+If clang++ reports `'array' file not found`, it picked a newer GCC whose C++ headers are missing (for example `gcc-16` without `libstdc++-16-dev`). Check with `clang++ -v -x c++ -fsyntax-only /dev/null` ("Selected GCC installation") and install the matching `libstdc++-<version>-dev`.
+
 **Arch Linux**
 
 ```sh
