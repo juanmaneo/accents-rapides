@@ -65,8 +65,6 @@ Check the installed Fcitx5 version with `pkg-config --modversion Fcitx5Core`. `c
 ```bash
 git clone https://github.com/juanmaneo/accents-rapides.git
 cd accents-rapides
-cargo build --workspace
-cargo test --workspace
 ```
 
 Build the addon and release `xtask`, then install it, restart Fcitx5, and add **Accents Rapides** in `fcitx5-configtool`:
@@ -84,14 +82,15 @@ fcitx5 -r
 sudo ./target/release/xtask fcitx5 uninstall
 ```
 
-Build and run the apps:
+Install the apps (release builds) into `~/.cargo/bin`, which must be on your `PATH`:
 
 ```bash
-cargo build --release --workspace
-./target/release/accents-rapides-editor
-./target/release/accents-rapides-overlay
-./target/release/accents-rapides config
+cargo install --locked --path .              # accents-rapides
+cargo install --locked --path crates/editor  # accents-rapides-editor
+cargo install --locked --path crates/overlay # accents-rapides-overlay
 ```
+
+Remove them with `cargo uninstall accents-rapides accents-rapides-editor accents-rapides-overlay`.
 
 ## Use
 
@@ -121,7 +120,7 @@ Name=Accents Rapides overlay
 Exec=/home/you/.cargo/bin/accents-rapides-overlay
 ```
 
-Use the binary's absolute path. For sway or Hyprland, add this to the compositor config instead:
+Replace `/home/you` with your home directory; autostart needs an absolute path. For sway or Hyprland, add this to the compositor config instead:
 
 ```text
 exec /home/you/.cargo/bin/accents-rapides-overlay          # sway
