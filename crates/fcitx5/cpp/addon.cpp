@@ -8,9 +8,7 @@
 
 #include "accents_rapides.hpp"
 
-#if !ACCENTS_RAPIDES_NO_STD_ALGORITHM
 #include <algorithm>
-#endif
 #include <array>
 #include <cstdint>
 #include <string>
@@ -54,20 +52,6 @@ constexpr std::array kNamedKeys{
     NamedKey{FcitxKey_ISO_Level3_Shift, key_name::altgr},
 };
 
-#if ACCENTS_RAPIDES_NO_STD_ALGORITHM
-static_assert(
-    [] {
-        for (std::size_t i = 0; i < kNamedKeys.size(); ++i) {
-            for (std::size_t j = i + 1; j < kNamedKeys.size(); ++j) {
-                if (kNamedKeys[i].sym == kNamedKeys[j].sym) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }(),
-    "a key symbol is named twice");
-#else
 static_assert(
     [] {
         auto keys = kNamedKeys;
@@ -75,21 +59,11 @@ static_assert(
         return std::ranges::adjacent_find(keys, {}, &NamedKey::sym) == keys.end();
     }(),
     "a key symbol is named twice");
-#endif
 
 /// The `key_name` of `sym`, or empty if the core knows it by its text.
 constexpr std::string_view keyName(fcitx::KeySym sym) noexcept {
-#if ACCENTS_RAPIDES_NO_STD_ALGORITHM
-    for (const auto &key : kNamedKeys) {
-        if (key.sym == sym) {
-            return key.name;
-        }
-    }
-    return {};
-#else
     const auto it = std::ranges::find(kNamedKeys, sym, &NamedKey::sym);
     return it == kNamedKeys.end() ? std::string_view{} : it->name;
-#endif
 }
 
 static_assert(keyName(FcitxKey_space) == key_name::space);
